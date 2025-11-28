@@ -1,9 +1,13 @@
 #include <unistd.h>
 #include <SDL2/SDL.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "SDL2/SDL2_gfxPrimitives.h"
 #include "SDL2/SDL_pixels.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+//Constants
+#define PLANET_NUM 10
 
 //Type definitions
 typedef struct {
@@ -20,14 +24,17 @@ typedef struct {
 
 //Function prototypes
 void planets_init(Planet_t* planets, int num_planets);
+Uint32 SDL_ColorToUint(SDL_Color c);
 SDL_Color random_color();
 
 int main() {
 
+    // To get a "random" seed, for the planets' position
+    srand(time(NULL));
     // Initialize planets
-    Planet_t planets[10];
-    planets_init(planets, 10);
-
+    Planet_t planets[PLANET_NUM];
+    planets_init(planets, PLANET_NUM);
+    
      // initialize SDL
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         printf("error initializing SDL: %s\n", SDL_GetError());
@@ -45,14 +52,11 @@ int main() {
     backgroud_color.g = 255;
     backgroud_color.b = 255;
     backgroud_color.a = 255;
-
     SDL_Color object_color;
-    for(int i = 0; i < 10; i++) {
-        object_color = random_color();
-        filledCircleColor(rend, planets[i].x, planets[i].y, 20, 
-                                SDL_ColorToUint(object_color));
-    }
-    
+    object_color.r = 12;
+    object_color.g = 12; 
+    object_color.b = 128;
+    object_color.a = 255;
 
     //Main loop
     int close = 0;
@@ -63,14 +67,22 @@ int main() {
                 close = 1;
             }
         }
-
+        
+    
         SDL_SetRenderDrawColor(rend, 
             backgroud_color.r, backgroud_color.g, backgroud_color.b, 
             backgroud_color.a);
         SDL_RenderClear(rend);
+        sleep(1);
+
+        for (int i = 0; i < PLANET_NUM; i++) {
+            filledCircleColor(rend, planets[i].x, planets[i].y, 5, 
+                                SDL_ColorToUint(object_color));
+        }
+
         SDL_RenderPresent(rend);
         //10ms delay to simulate time unit
-        SDL_Delay(10);
+        SDL_Delay(1000);
     }
 
      // destroy renderer
@@ -92,6 +104,10 @@ void planets_init(Planet_t* planets, int num_planets) {
         planets[i].mass = 10.0;
         planets[i].name = 'A' + i;
     }
+}
+
+Uint32 SDL_ColorToUint(SDL_Color c){
+	return (Uint32)((c.a << 24) + (c.b << 16) + (c.g << 8)+ (c.r << 0));
 }
 
 SDL_Color random_color(){
