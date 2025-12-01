@@ -192,8 +192,6 @@ void new_trash_acceleration(Planet_t planets[], int total_planets,
         total_vector_force.amplitude = 0;
         total_vector_force.angle = 0;
         for (int n_planet = 0; n_planet < PLANET_NUM; n_planet++) {
-            // This assumes your Trash_t struct has x and y, but it has a Vector 'position'
-            // You may need to convert the position vector to cartesian coordinates first.
             float force_vector_x = planets[n_planet].x - trash[n_trash].position.x;
             float force_vector_y = planets[n_planet].y - trash[n_trash].position.y;
             local_vector_force = make_vector(force_vector_x, force_vector_y);
@@ -216,8 +214,6 @@ void new_trash_velocity(Trash_t trash[], int total_trash) {
 
 void new_trash_position(Trash_t trash[], int total_trash) {
     for (int n_trash = 0; n_trash < total_trash; n_trash++) {
-        // This assumes your Trash_t struct has x and y, but it has a Vector 'position'
-        // You may need to update the position vector's components instead.
         trash[n_trash].position.x += trash[n_trash].velocity.amplitude * 2 *
                                    cos(trash[n_trash].velocity.angle);
         trash[n_trash].position.y += trash[n_trash].velocity.amplitude *
