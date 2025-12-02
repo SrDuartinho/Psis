@@ -72,6 +72,45 @@ void remove_trash(Trash_t trash[], int *n_trash, int index) {
     (*n_trash)--;  // one less element
 }
 
+void transfer_trash_to_planet(Ship* ship, Planet_t* planet) {
+    // move each trash item from ship to planet
+    for (int i = 0; i < ship->trash_count; i++) {
+
+        // Do not overflow the planet storage
+        if (planet->trash_count < N_TRASH) {
+            planet->trash[planet->trash_count] = ship->trash[i];
+            planet->trash_count++;
+        }
+    }
+
+    // Ship loses all trash
+    ship->trash_count = 0;
+}
+
+void scatter_trash(Ship* ship, Trash_t trash[], int* n_trash, int window_size)
+{
+    for (int i = 0; i < ship->trash_count; i++) {
+
+        // don't overflow global trash array
+        if (*n_trash >= N_TRASH)
+            break;
+
+        // copy the trash
+        trash[*n_trash] = ship->trash[i];
+
+        // give it a NEW RANDOM POSITION
+        trash[*n_trash].position.x = rand() % window_size;
+        trash[*n_trash].position.y = rand() % window_size;
+
+        (*n_trash)++;
+    }
+
+    // all trash thrown out -> ship is empty
+    ship->trash_count = 0;
+}
+
+
+
 
 void draw_char(SDL_Renderer* r, TTF_Font* font, char c, int x, int y, SDL_Color ship_color) {
     SDL_Color color = { 0, 0, 0, 255 };
@@ -118,6 +157,10 @@ int main() {
         trash[i].mass = 1.0;
     }
     int n_trash = N_TRASH;   // start full or whatever number you want
+
+    
+    //make the recycling planet
+    int planet_index = rand() % PLANET_NUM;
 
      // initialize SDL
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
@@ -189,7 +232,7 @@ int main() {
         SDL_RenderClear(rend);
 
         for (int i = 0; i < PLANET_NUM; i++) {
-            filledCircleColor(rend, planets[i].x, planets[i].y, 20, 
+            filledCircleColor(rend, planets[i].x* CELL_SIZE + CELL_SIZE/2, planets[i].y* CELL_SIZE + CELL_SIZE/2, 20, 
                                 SDL_ColorToUint(planet_color));
         }
 
@@ -214,7 +257,7 @@ int main() {
             char_data[n_chars].ch = c;
             char_data[n_chars].position.x = WINDOW_SIZE / 2;
             char_data[n_chars].position.y = WINDOW_SIZE / 2;
-            char_data[n_chars].trash = 0;
+            char_data[n_chars].trash_count = 0;
             n_chars++;
 
         } else if (strcmp(message_type, "MOVE") == 0) {
@@ -246,16 +289,44 @@ int main() {
                       char_data[i].position.y, ship_color);
         // Trash interaction
         for (int i = 0; i < n_chars; i++){
-            //printf("%d", char_data[i].trash);
             for (int j = 0; j < n_trash; j++){
                 //printf("%f %f\n", trash[j].position.x, trash[j].position.y);
                 //fflush(stdout);
                 if (char_data[i].position.x == trash[j].position.y && char_data[i].position.y == trash[j].position.x){
+                    // store trash
+                    if (char_data[i].trash_count < N_TRASH) {
+                        char_data[i].trash[char_data[i].trash_count] = trash[j];
+                        char_data[i].trash_count++;
+                    }
+
                     remove_trash(trash, &n_trash, j);
-                    char_data[i].trash++;
                     j--;
-                    printf("Amount of trash in client %c: %d\n", char_data[i].ch, char_data[i].trash);
+
+                    printf("Amount of trash in client %c: %d\n", char_data[i].ch, char_data[i].trash_count);
                     fflush(stdout);
+                }
+            }
+        }
+
+        // Planet interaction
+        for (int i = 0; i < n_chars; i++){
+            //printf("%d", char_data[i].trash);
+            for (int j = 0; j < PLANET_NUM; j++){
+                //printf("%d %d\n", planets[j].x, planets[j].y);
+                //fflush(stdout);
+                if (char_data[i].position.x == planets[j].y && char_data[i].position.y == planets[j].x){
+                    if (j == planet_index){
+                        // move trash from ship to planet
+                        transfer_trash_to_planet(&char_data[i], &planets[j]);
+
+                        printf("Ship %c delivered trash to planet %c! Planet now has %d pieces.\n",
+                            char_data[i].ch, planets[j].name, planets[j].trash_count);
+                    }
+                    else{
+                        scatter_trash(&char_data[i], trash, &n_trash, WINDOW_SIZE);
+                        printf("Ship %c crashed into %c and scattered its trash!\n",
+                            char_data[i].ch, planets[j].name);
+                    }
                 }
             }
         }
@@ -274,8 +345,8 @@ int main() {
 
 void planets_init(Planet_t* planets, int num_planets) {
      for (int i = 0; i < num_planets; i++) {
-        planets[i].x = rand() % 1000;
-        planets[i].y = rand() % 1000;
+        planets[i].x = rand() % WINDOW_SIZE;
+        planets[i].y = rand() % WINDOW_SIZE;
         planets[i].mass = 10.0;
         planets[i].name = 'A' + i;
     }
@@ -285,8 +356,8 @@ void planets_init(Planet_t* planets, int num_planets) {
             // Check if planet i and j have the same coordinates
             if (planets[i].x == planets[j].x && planets[i].y == planets[j].y) {
                 // If they do, regenerate new coordinates.
-                planets[j].x = rand() % 1000;
-                planets[j].y = rand() % 1000;
+                planets[j].x = rand() % WINDOW_SIZE;
+                planets[j].y = rand() % WINDOW_SIZE;
                 
                 // Restart the check for the modified planet j from the beginning
                 i = 0; 

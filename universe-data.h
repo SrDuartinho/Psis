@@ -5,7 +5,7 @@
 #define UNIVERSE_DATA_H
 
 //Constants
-#define PLANET_NUM 10
+#define PLANET_NUM 2
 #define N_TRASH 20
 
 //Type definitions
@@ -20,13 +20,6 @@ typedef struct {
 } Position_t;
 
 typedef struct {
-    int x;
-    int y;
-    float mass;
-    char name;
-} Planet_t;
-
-typedef struct {
     Position_t position;
     Vector velocity;
     Vector acceleration;
@@ -34,8 +27,19 @@ typedef struct {
 } Trash_t;
 
 typedef struct {
+    Trash_t trash[N_TRASH];
+    int trash_count;
+    int x;
+    int y;
+    float mass;
+    char name;
+} Planet_t;
+
+
+typedef struct {
+    Trash_t trash[N_TRASH];
     Position_t position;
-    int trash;
+    int trash_count;
     char ch;
 } Ship;
 
