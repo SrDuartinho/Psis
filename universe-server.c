@@ -1,9 +1,310 @@
-#include <stdio.h>
+#include <unistd.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <math.h>
+#include "communication.h"
+#include "universe-data.h"
+#include "gravitation.h"
+#include "SDL2/SDL2_gfxPrimitives.h"
+#include "SDL2/SDL_pixels.h"
+
+#define WINDOW_SIZE 50
+#define CELL_SIZE   20     // size of each grid cell in pixels
+
+
+//Function prototypes
+void planets_init(Planet_t* planets, int num_planets);
+SDL_Color random_color();
+Uint32 SDL_ColorToUint(SDL_Color c);
+
+
+direction_t random_direction() {
+    return rand() % 4;
+}
+
+void new_position(int* x, int* y, direction_t direction) {
+    switch (direction) {
+        case UP:
+            (*x)--;
+            if (*x < 0) {
+                *x = WINDOW_SIZE + *x; 
+            }
+            break;
+        case DOWN:
+            (*x)++;
+            if (*x > WINDOW_SIZE-1) {
+                *x = *x - WINDOW_SIZE; 
+            }
+            break;
+        case LEFT:
+            (*y)--;
+            if (*y < 0) {
+                *y = WINDOW_SIZE + *y; 
+            }
+            break;
+        case RIGHT:
+            (*y)++;
+            if (*y > WINDOW_SIZE-1) {
+                *y = *y - WINDOW_SIZE; 
+            }
+            break;
+    }
+}
+
+int find_ch_info(Ship arr[], int n, char ch) {
+    for (int i = 0; i < n; i++)
+        if (arr[i].ch == ch)
+            return i;
+    return -1;
+}
+
+void remove_trash(Trash_t trash[], int *n_trash, int index) {
+    if (index < 0 || index >= *n_trash) return;
+
+    // shift all elements left
+    for (int j = index; j < *n_trash - 1; j++) {
+        trash[j] = trash[j + 1];
+    }
+
+    (*n_trash)--;  // one less element
+}
+
+
+void draw_char(SDL_Renderer* r, TTF_Font* font, char c, int x, int y, SDL_Color ship_color) {
+    SDL_Color color = { 0, 0, 0, 255 };
+
+    char text[2] = {c, 0};
+    SDL_Surface* surface = TTF_RenderText_Solid(font, text, color);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(r, surface);
+
+    SDL_Rect dest;
+    dest.x = y * CELL_SIZE;
+    dest.y = x * CELL_SIZE;
+    dest.w = surface->w;
+    dest.h = surface->h;
+    filledCircleColor(r, dest.x + CELL_SIZE/2, dest.y + CELL_SIZE/2, 20, SDL_ColorToUint(ship_color));
+    SDL_FreeSurface(surface);
+    SDL_RenderCopy(r, texture, NULL, &dest);
+    SDL_DestroyTexture(texture);
+}
 
 int main() {
 
-    //Server automatically assigns a letter to each client to avoid conflict resolution.
-    //Secret number generation for each client to identify itself to the server for communication.
-    printf("Universe Server Running\n");
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        printf("SDL init error: %s\n", SDL_GetError());
+        return 1;
+    }
+    if (TTF_Init() != 0) {
+        printf("TTF init error: %s\n", TTF_GetError());
+        return 1;
+    }
+    // To get a "random" seed, for the planets' position
+    srand(time(NULL));
+
+    // Initialize planets
+    Planet_t planets[PLANET_NUM];
+    planets_init(planets, PLANET_NUM);
+
+    // Initialize trash
+    Trash_t trash[N_TRASH];
+    for (int i = 0; i < N_TRASH; i++) {
+        trash[i].position.x = rand() % WINDOW_SIZE;
+        trash[i].position.y = rand() % WINDOW_SIZE;
+        trash[i].velocity.amplitude = 0;
+        trash[i].velocity.angle = 0;
+        trash[i].mass = 1.0;
+    }
+    int n_trash = N_TRASH;   // start full or whatever number you want
+
+     // initialize SDL
+    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+        printf("error initializing SDL: %s\n", SDL_GetError());
+    }
+
+    SDL_Window* win = SDL_CreateWindow("UNIVERSE SIMULATOR",
+                                       SDL_WINDOWPOS_CENTERED,
+                                       SDL_WINDOWPOS_CENTERED,
+                                       1000, 1000, 0);
+
+    Uint32 render_flags = SDL_RENDERER_ACCELERATED;
+    SDL_Renderer* rend = SDL_CreateRenderer(win, -1, render_flags);
+    SDL_Color backgroud_color;
+    backgroud_color.r = 255;
+    backgroud_color.g = 255;
+    backgroud_color.b = 255;
+    backgroud_color.a = 255;
+
+    SDL_Color planet_color;
+    planet_color.r = 80;
+    planet_color.g = 80; 
+    planet_color.b = 186;
+    planet_color.a = 255;
+
+    SDL_Color trash_color;
+    trash_color.r = 128;
+    trash_color.g = 128; 
+    trash_color.b = 0;
+    trash_color.a = 255;
+    
+    SDL_Color ship_color;
+    ship_color.r = 186;
+    ship_color.g = 80; 
+    ship_color.b = 80;
+    ship_color.a = 100;
+
+
+    //Draw initial trash
+    SDL_RenderPresent(rend);
+
+    TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32);
+    if (!font) {
+        printf("Font error: %s\n", TTF_GetError());
+        return 1;
+    }
+
+    void* fd = create_server_channel();
+
+    Ship char_data[100];
+    int n_chars = 0;
+
+    char message_type[100];
+    char c;
+    direction_t d;
+
+    int close = 0;
+    while(close == 0){
+        SDL_Event event;
+        while(SDL_PollEvent(&event)){
+            if (event.type == SDL_QUIT){
+                close = 1;
+            }
+        }
+
+        SDL_SetRenderDrawColor(rend, 
+            backgroud_color.r, backgroud_color.g, backgroud_color.b, 
+            backgroud_color.a);
+        SDL_RenderClear(rend);
+
+        for (int i = 0; i < PLANET_NUM; i++) {
+            filledCircleColor(rend, planets[i].x, planets[i].y, 20, 
+                                SDL_ColorToUint(planet_color));
+        }
+
+        for(int i = 0; i < n_trash; i++) {
+            filledCircleColor(rend, trash[i].position.x * CELL_SIZE + CELL_SIZE/2, trash[i].position.y * CELL_SIZE + CELL_SIZE/2,
+                                4, SDL_ColorToUint(trash_color));
+        }
+
+        read_message(fd, message_type, &c, &d);
+
+        if (strcmp(message_type, "CONNECT") == 0) {
+
+            int pos = find_ch_info(char_data, n_chars, c);
+
+            if (pos == -1) {
+                send_response(fd, "OK");
+            } else {
+                send_response(fd, "NOT OK");
+                continue;
+            }
+
+            char_data[n_chars].ch = c;
+            char_data[n_chars].position.x = WINDOW_SIZE / 2;
+            char_data[n_chars].position.y = WINDOW_SIZE / 2;
+            char_data[n_chars].trash = 0;
+            n_chars++;
+
+        } else if (strcmp(message_type, "MOVE") == 0) {
+
+            int pos = find_ch_info(char_data, n_chars, c);
+            if (pos != -1) {
+
+                int x = char_data[pos].position.x;
+                int y = char_data[pos].position.y;
+
+                new_position(&x, &y, d);
+
+                char_data[pos].position.x = x;
+                char_data[pos].position.y = y;
+                
+                //printf("%d %d\n", x, y);
+                
+                send_response(fd, "OK");
+            }
+        }
+
+        
+
+        // Draw all characters
+        for (int i = 0; i < n_chars; i++)
+            draw_char(rend, font,
+                      char_data[i].ch,
+                      char_data[i].position.x,
+                      char_data[i].position.y, ship_color);
+        // Trash interaction
+        for (int i = 0; i < n_chars; i++){
+            //printf("%d", char_data[i].trash);
+            for (int j = 0; j < n_trash; j++){
+                //printf("%f %f\n", trash[j].position.x, trash[j].position.y);
+                //fflush(stdout);
+                if (char_data[i].position.x == trash[j].position.y && char_data[i].position.y == trash[j].position.x){
+                    remove_trash(trash, &n_trash, j);
+                    char_data[i].trash++;
+                    j--;
+                    printf("Amount of trash in client %c: %d\n", char_data[i].ch, char_data[i].trash);
+                    fflush(stdout);
+                }
+            }
+        }
+        SDL_RenderPresent(rend);
+
+        SDL_Delay(10);
+    }
+
+    SDL_DestroyRenderer(rend);
+    SDL_DestroyWindow(win);
+    TTF_Quit();
+    SDL_Quit();
     return 0;
+}
+
+
+void planets_init(Planet_t* planets, int num_planets) {
+     for (int i = 0; i < num_planets; i++) {
+        planets[i].x = rand() % 1000;
+        planets[i].y = rand() % 1000;
+        planets[i].mass = 10.0;
+        planets[i].name = 'A' + i;
+    }
+
+     for (int i = 0; i < num_planets; i++) {
+        for (int j = i + 1; j < num_planets; j++) {
+            // Check if planet i and j have the same coordinates
+            if (planets[i].x == planets[j].x && planets[i].y == planets[j].y) {
+                // If they do, regenerate new coordinates.
+                planets[j].x = rand() % 1000;
+                planets[j].y = rand() % 1000;
+                
+                // Restart the check for the modified planet j from the beginning
+                i = 0; 
+                break;
+            }
+        }
+    }
+}
+
+SDL_Color random_color(){
+    SDL_Color color;
+    color.r = rand() % 256;
+    color.g = rand() % 256;
+    color.b = rand() % 256;
+    color.a = 100;
+    return color;
+}
+
+Uint32 SDL_ColorToUint(SDL_Color c){
+	return (Uint32)((c.a << 24) + (c.b << 16) + (c.g << 8)+ (c.r << 0));
 }

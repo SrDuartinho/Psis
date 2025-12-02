@@ -6,7 +6,7 @@
 
 //Constants
 #define PLANET_NUM 10
-#define N_TRASH 1
+#define N_TRASH 20
 
 //Type definitions
 typedef struct {
@@ -32,6 +32,12 @@ typedef struct {
     Vector acceleration;
     float mass;
 } Trash_t;
+
+typedef struct {
+    Position_t position;
+    int trash;
+    char ch;
+} Ship;
 
 
 Vector make_vector(float x, float y);

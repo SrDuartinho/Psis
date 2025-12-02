@@ -6,6 +6,8 @@ OBJ = universe-simulator.o gravitation.o universe-data.o
 
 all: program universe-client universe-server
 
+test: universe-server universe-client
+
 #
 # --- Main program (universe-simulator) ---
 #
@@ -23,24 +25,16 @@ universe-data.o: universe-data.c universe-data.h
 
 
 #
-# --- Universe Client ---
+# --- Server and Client ---
 #
-universe-client: universe-client.o universe-data.o gravitation.o
-	$(CC) universe-client.o universe-data.o gravitation.o -lm -o universe-client
+universe-server: universe-server.c universe-data.o communication.c communication.h gravitation.c gravitation.h
+	$(CC) $(CFLAGS) -o universe-server universe-server.c communication.c gravitation.c universe-data.o \
+		-lncurses -lzmq -lSDL2 -lSDL2_ttf -lSDL2_gfx -lSDL2_image -lm
 
-universe-client.o: universe-client.c universe-data.h gravitation.h
-	$(CC) $(CFLAGS) -c universe-client.c
-
-
-#
-# --- Universe Server ---
-#
-universe-server: universe-server.o universe-data.o gravitation.o
-	$(CC) universe-server.o universe-data.o gravitation.o -lm -o universe-server
-
-universe-server.o: universe-server.c universe-data.h gravitation.h
-	$(CC) $(CFLAGS) -c universe-server.c
-
+universe-client: universe-client.c universe-data.o communication.c communication.h
+	$(CC) $(CFLAGS) -o universe-client universe-client.c communication.c universe-data.o \
+		-lncurses -lzmq -lm
 
 clean:
 	rm -f *.o program universe-client universe-server
+
