@@ -11,7 +11,6 @@
 #include "SDL2/SDL2_gfxPrimitives.h"
 #include "SDL2/SDL_pixels.h"
 
-#define WINDOW_SIZE 50
 #define CELL_SIZE   20     // size of each grid cell in pixels
 
 
@@ -340,31 +339,6 @@ int main() {
     TTF_Quit();
     SDL_Quit();
     return 0;
-}
-
-
-void planets_init(Planet_t* planets, int num_planets) {
-     for (int i = 0; i < num_planets; i++) {
-        planets[i].x = rand() % WINDOW_SIZE;
-        planets[i].y = rand() % WINDOW_SIZE;
-        planets[i].mass = 10.0;
-        planets[i].name = 'A' + i;
-    }
-
-     for (int i = 0; i < num_planets; i++) {
-        for (int j = i + 1; j < num_planets; j++) {
-            // Check if planet i and j have the same coordinates
-            if (planets[i].x == planets[j].x && planets[i].y == planets[j].y) {
-                // If they do, regenerate new coordinates.
-                planets[j].x = rand() % WINDOW_SIZE;
-                planets[j].y = rand() % WINDOW_SIZE;
-                
-                // Restart the check for the modified planet j from the beginning
-                i = 0; 
-                break;
-            }
-        }
-    }
 }
 
 SDL_Color random_color(){
