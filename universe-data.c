@@ -30,20 +30,19 @@ Vector add_vectors(Vector v1, Vector v2) {
 
 
 void planets_init(Planet_t* planets, int num_planets) {
-    // To get a "random" seed, for the planets' position
-    srand(time(NULL));
-
     for (int i = 0; i < num_planets; i++) {
         if(i == 0){
-            planets[i].x = rand() % 1000;
-            planets[i].y = rand() % 1000;
+            planets[i].x = rand() % WINDOW_SIZE;
+            planets[i].y = rand() % WINDOW_SIZE;
+            planets[i].trash_count = 0;
             planets[i].mass = 10.0;
             planets[i].name = 'A';
             planets[i].is_garbage = 1;
             continue;
         }
-        planets[i].x = rand() % 1000;
-        planets[i].y = rand() % 1000;
+        planets[i].x = rand() % WINDOW_SIZE;
+        planets[i].y = rand() % WINDOW_SIZE;
+        planets[i].trash_count = 0;
         planets[i].mass = 10.0;
         planets[i].name = 'A' + i;
         planets[i].is_garbage= 0;
@@ -54,8 +53,8 @@ void planets_init(Planet_t* planets, int num_planets) {
             // Check if planet i and j have the same coordinates
             if (planets[i].x == planets[j].x && planets[i].y == planets[j].y) {
                 // If they do, regenerate new coordinates.
-                planets[j].x = rand() % 1000;
-                planets[j].y = rand() % 1000;
+                planets[j].x = rand() % WINDOW_SIZE;
+                planets[j].y = rand() % WINDOW_SIZE;
                 
                 // Restart the check for the modified planet j from the beginning
                 i = 0; 
@@ -66,14 +65,13 @@ void planets_init(Planet_t* planets, int num_planets) {
 }
 
 void trash_init(Trash_t* trash, int num_trash) {
-        
-    // To get a "random" seed, for the trash positions
-    srand(time(NULL));
     for (int i = 0; i < num_trash; i++) {
-        trash[i].position.x = rand() % 1000;
-        trash[i].position.y = rand() % 1000;
+        trash[i].position.x = rand() % WINDOW_SIZE;
+        trash[i].position.y = rand() % WINDOW_SIZE;
         trash[i].velocity.amplitude = 0;
+        trash[i].acceleration.amplitude = 0;
         trash[i].velocity.angle = 0;
+        trash[i].acceleration.angle = 0;
         trash[i].mass = 1.0;
     }
 }

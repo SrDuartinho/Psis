@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #include "SDL2/SDL2_gfxPrimitives.h"
 #include "SDL2/SDL_pixels.h"
 #include "universe-data.h"
@@ -11,7 +12,8 @@
 
 
 int main() {
-
+    // To get a "random" seed, for the planets' position
+    srand(time(NULL));
     // Initialize planets
     Planet_t planets[PLANET_NUM];
     //planets[0] = garbage collector planet; -> planets[0].is_garbage = 1;
@@ -47,6 +49,8 @@ int main() {
         new_trash_acceleration(planets, PLANET_NUM, trash, N_TRASH);
         new_trash_velocity(trash, N_TRASH);
         new_trash_position(trash, N_TRASH);
+        SDL_RenderPresent(rend);
+        SDL_Delay(10);
     }
 
     disp_close(rend, win);

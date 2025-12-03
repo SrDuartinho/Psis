@@ -1,5 +1,6 @@
 #include "display.h"
 
+
 SDL_Window* disp_init(){
     // initialize SDL
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
@@ -9,7 +10,7 @@ SDL_Window* disp_init(){
     SDL_Window* win = SDL_CreateWindow("UNIVERSE SIMULATOR",
                                        SDL_WINDOWPOS_CENTERED,
                                        SDL_WINDOWPOS_CENTERED,
-                                       1000, 1000, 0);
+                                       WINDOW_SIZE, WINDOW_SIZE, 0);
 
     return win;                                
 }
@@ -32,10 +33,12 @@ void planet_drawer(Planet_t* planets, int planets_num, SDL_Renderer* rend, SDL_C
     for (int i = 0; i < planets_num; i++) {
         // Draw garbage collector planet differently
         if(planets[i].is_garbage == 1){
-            filledCircleColor(rend, planets[i].x, planets[i].y, 30, SDL_ColorToUint(garbage_planet_color));
+            filledCircleColor(rend, planets[i].x, planets[i].y, 20, 
+                                SDL_ColorToUint(garbage_planet_color));
         }
         else{
-            filledCircleColor(rend, planets[i].x, planets[i].y, 20, SDL_ColorToUint(planet_color));              
+            filledCircleColor(rend, planets[i].x, planets[i].y, 20, 
+                                SDL_ColorToUint(planet_color));             
         }
     }
 }
@@ -45,9 +48,6 @@ void trash_drawer(Trash_t* trash, int trash_num, SDL_Renderer* rend, SDL_Color t
             filledCircleColor(rend, trash[i].position.x, trash[i].position.y,
                                 4, SDL_ColorToUint(trash_color));
         }
-        SDL_RenderPresent(rend);
-        //10ms delay to simulate time unit
-        SDL_Delay(10);
 }
 
 void disp_close(SDL_Renderer* rend, SDL_Window* win){

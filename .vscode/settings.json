@@ -3,6 +3,7 @@
         "math.h": "c",
         "universe-data.h": "c",
         "time.h": "c",
-        "gravitation.h": "c"
+        "gravitation.h": "c",
+        "sdl_pixels.h": "c"
     }
 }

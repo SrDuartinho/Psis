@@ -5,9 +5,9 @@
 #define UNIVERSE_DATA_H
 
 //Constants
-#define PLANET_NUM 4
-#define N_TRASH 20
-#define WINDOW_SIZE 50
+#define PLANET_NUM 2
+#define N_TRASH 10
+#define WINDOW_SIZE 1000
 
 //Type definitions
 typedef struct {

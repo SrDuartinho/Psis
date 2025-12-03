@@ -12,8 +12,6 @@
 #include "SDL2/SDL2_gfxPrimitives.h"
 #include "SDL2/SDL_pixels.h"
 
-#define CELL_SIZE   20     // size of each grid cell in pixels
-
 
 //Function prototypes
 void planets_init(Planet_t* planets, int num_planets);
@@ -28,25 +26,25 @@ direction_t random_direction() {
 void new_position(int* x, int* y, direction_t direction) {
     switch (direction) {
         case UP:
-            (*x)--;
+            (*x) = (*x)-5;
             if (*x < 0) {
                 *x = WINDOW_SIZE + *x; 
             }
             break;
         case DOWN:
-            (*x)++;
+            (*x)= (*x)+5;
             if (*x > WINDOW_SIZE-1) {
                 *x = *x - WINDOW_SIZE; 
             }
             break;
         case LEFT:
-            (*y)--;
+            (*y)= (*y)-5;
             if (*y < 0) {
                 *y = WINDOW_SIZE + *y; 
             }
             break;
         case RIGHT:
-            (*y)++;
+            (*y)= (*y)+5;
             if (*y > WINDOW_SIZE-1) {
                 *y = *y - WINDOW_SIZE; 
             }
@@ -120,11 +118,11 @@ void draw_char(SDL_Renderer* r, TTF_Font* font, char c, int x, int y, SDL_Color 
     SDL_Texture* texture = SDL_CreateTextureFromSurface(r, surface);
 
     SDL_Rect dest;
-    dest.x = y * CELL_SIZE;
-    dest.y = x * CELL_SIZE;
+    dest.x = y;
+    dest.y = x;
     dest.w = surface->w;
     dest.h = surface->h;
-    filledCircleColor(r, dest.x + CELL_SIZE/2, dest.y + CELL_SIZE/2, 20, SDL_ColorToUint(ship_color));
+    filledCircleColor(r, dest.x + 10, dest.y +20, 20, SDL_ColorToUint(ship_color));
     SDL_FreeSurface(surface);
     SDL_RenderCopy(r, texture, NULL, &dest);
     SDL_DestroyTexture(texture);
@@ -151,6 +149,8 @@ int main() {
     Trash_t trash[N_TRASH];
     trash_init(trash, N_TRASH);
     int n_trash = N_TRASH;   // start full or whatever number you want
+    int aux_trash_recycle = 0; //auxiliar variable for printing information
+    int aux_trash_spill = 0; //auxiliar variable for printing information
     
     //make the recycling planet
     int planet_index = rand() % PLANET_NUM;
@@ -164,9 +164,6 @@ int main() {
     SDL_Color garbage_planet_color = {20, 20, 186, 255};
     SDL_Color trash_color = {128, 128, 0, 255};
     SDL_Color ship_color = {186, 80, 80, 100};
-
-    //Draw initial trash
-    SDL_RenderPresent(rend);
 
     TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32);
     if (!font) {
@@ -191,9 +188,9 @@ int main() {
                 close = 1;
             }
         }
-
+        
         planet_drawer(planets, PLANET_NUM, rend, planet_color, garbage_planet_color);   
-        trash_drawer(trash, N_TRASH, rend, trash_color);
+        trash_drawer(trash, n_trash, rend, trash_color);
 
         read_message(fd, message_type, &c, &d);
 
@@ -244,21 +241,25 @@ int main() {
         // Trash interaction
         for (int i = 0; i < n_chars; i++){
             for (int j = 0; j < n_trash; j++){
-                //printf("%f %f\n", trash[j].position.x, trash[j].position.y);
+                //printf("%f %f\n", trash[j].position.y, trash[j].position.x);
                 //fflush(stdout);
-                if (char_data[i].position.x == trash[j].position.y && char_data[i].position.y == trash[j].position.x){
-                    // store trash
-                    if (char_data[i].trash_count < N_TRASH) {
-                        char_data[i].trash[char_data[i].trash_count] = trash[j];
-                        char_data[i].trash_count++;
-                    }
-
-                    remove_trash(trash, &n_trash, j);
-                    j--;
-
-                    printf("Amount of trash in client %c: %d\n", char_data[i].ch, char_data[i].trash_count);
-                    fflush(stdout);
+                float dx = (char_data[i].position.x + 20) - trash[j].position.y;
+                float dy = (char_data[i].position.y + 10) - trash[j].position.x;
+                float distance = sqrt(dx * dx + dy * dy);
+                if (distance <= 20.0f) {  // within radius of 20
+                // store trash in ship
+                if (char_data[i].trash_count < N_TRASH) {
+                    char_data[i].trash[char_data[i].trash_count] = trash[j];
+                    char_data[i].trash_count++;
                 }
+
+                remove_trash(trash, &n_trash, j);
+                j--;  // adjust index since we removed an element
+                aux_trash_spill = n_trash;
+                aux_trash_recycle = N_TRASH - n_trash;
+                printf("Amount of trash in client %c: %d\n", char_data[i].ch, char_data[i].trash_count);
+                fflush(stdout);
+            }
             }
         }
 
@@ -266,20 +267,30 @@ int main() {
         for (int i = 0; i < n_chars; i++){
             //printf("%d", char_data[i].trash);
             for (int j = 0; j < PLANET_NUM; j++){
-                //printf("%d %d\n", planets[j].x, planets[j].y);
+                //printf("%d %d\n", planets[j].y, planets[j].x);
                 //fflush(stdout);
-                if (char_data[i].position.x == planets[j].y && char_data[i].position.y == planets[j].x){
-                    if (j == planet_index){
+                float dx = (char_data[i].position.x + 20) - planets[j].y;
+                float dy = (char_data[i].position.y + 10) - planets[j].x;
+                float distance = sqrt(dx * dx + dy * dy);
+                if (distance <= 20.0f) {  // within radius of 20
+                    if (j == planet_index) {
                         // move trash from ship to planet
                         transfer_trash_to_planet(&char_data[i], &planets[j]);
-
-                        printf("Ship %c delivered trash to planet %c! Planet now has %d pieces.\n",
-                            char_data[i].ch, planets[j].name, planets[j].trash_count);
-                    }
-                    else{
+                        
+                        if (aux_trash_recycle == planets[j].trash_count){
+                            printf("Ship %c delivered trash to planet %c! Planet now has %d pieces.\n",
+                                char_data[i].ch, planets[j].name, planets[j].trash_count);
+                            aux_trash_recycle = 0;
+                        }
+                    } else {
+                        // ship crashes into other planet, scatter trash                       
                         scatter_trash(&char_data[i], trash, &n_trash, WINDOW_SIZE);
-                        printf("Ship %c crashed into %c and scattered its trash!\n",
-                            char_data[i].ch, planets[j].name);
+
+                        if (aux_trash_spill != n_trash){
+                            printf("Ship %c crashed into %c and scattered its trash!\n",
+                                char_data[i].ch, planets[j].name);
+                            aux_trash_spill = n_trash;    
+                        }
                     }
                 }
             }

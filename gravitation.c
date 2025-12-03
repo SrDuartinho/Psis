@@ -8,9 +8,9 @@
 
 void correct_position(float *pos) {
     if (*pos < 0) {
-        *pos = 1000 + *pos;
-    } else if (*pos >= 1000) {
-        *pos = *pos - 1000;
+        *pos = WINDOW_SIZE + *pos;
+    } else if (*pos >= WINDOW_SIZE) {
+        *pos = *pos - WINDOW_SIZE;
     }
 }
 
