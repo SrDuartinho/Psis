@@ -8,6 +8,7 @@
 #include "communication.h"
 #include "universe-data.h"
 #include "gravitation.h"
+#include "display.h"
 #include "SDL2/SDL2_gfxPrimitives.h"
 #include "SDL2/SDL_pixels.h"
 
@@ -148,55 +149,21 @@ int main() {
 
     // Initialize trash
     Trash_t trash[N_TRASH];
-    for (int i = 0; i < N_TRASH; i++) {
-        trash[i].position.x = rand() % WINDOW_SIZE;
-        trash[i].position.y = rand() % WINDOW_SIZE;
-        trash[i].velocity.amplitude = 0;
-        trash[i].velocity.angle = 0;
-        trash[i].mass = 1.0;
-    }
+    trash_init(trash, N_TRASH);
     int n_trash = N_TRASH;   // start full or whatever number you want
-
     
     //make the recycling planet
     int planet_index = rand() % PLANET_NUM;
 
-     // initialize SDL
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-        printf("error initializing SDL: %s\n", SDL_GetError());
-    }
-
-    SDL_Window* win = SDL_CreateWindow("UNIVERSE SIMULATOR",
-                                       SDL_WINDOWPOS_CENTERED,
-                                       SDL_WINDOWPOS_CENTERED,
-                                       1000, 1000, 0);
-
-    Uint32 render_flags = SDL_RENDERER_ACCELERATED;
-    SDL_Renderer* rend = SDL_CreateRenderer(win, -1, render_flags);
-    SDL_Color backgroud_color;
-    backgroud_color.r = 255;
-    backgroud_color.g = 255;
-    backgroud_color.b = 255;
-    backgroud_color.a = 255;
-
-    SDL_Color planet_color;
-    planet_color.r = 80;
-    planet_color.g = 80; 
-    planet_color.b = 186;
-    planet_color.a = 255;
-
-    SDL_Color trash_color;
-    trash_color.r = 128;
-    trash_color.g = 128; 
-    trash_color.b = 0;
-    trash_color.a = 255;
+    // Initialize display
+    SDL_Window* win = disp_init();
+    SDL_Renderer* rend = rend_init(win);
+    SDL_RenderPresent(rend);   
     
-    SDL_Color ship_color;
-    ship_color.r = 186;
-    ship_color.g = 80; 
-    ship_color.b = 80;
-    ship_color.a = 100;
-
+    SDL_Color planet_color = {80, 80, 186, 255};
+    SDL_Color garbage_planet_color = {20, 20, 186, 255};
+    SDL_Color trash_color = {128, 128, 0, 255};
+    SDL_Color ship_color = {186, 80, 80, 100};
 
     //Draw initial trash
     SDL_RenderPresent(rend);
@@ -225,20 +192,8 @@ int main() {
             }
         }
 
-        SDL_SetRenderDrawColor(rend, 
-            backgroud_color.r, backgroud_color.g, backgroud_color.b, 
-            backgroud_color.a);
-        SDL_RenderClear(rend);
-
-        for (int i = 0; i < PLANET_NUM; i++) {
-            filledCircleColor(rend, planets[i].x* CELL_SIZE + CELL_SIZE/2, planets[i].y* CELL_SIZE + CELL_SIZE/2, 20, 
-                                SDL_ColorToUint(planet_color));
-        }
-
-        for(int i = 0; i < n_trash; i++) {
-            filledCircleColor(rend, trash[i].position.x * CELL_SIZE + CELL_SIZE/2, trash[i].position.y * CELL_SIZE + CELL_SIZE/2,
-                                4, SDL_ColorToUint(trash_color));
-        }
+        planet_drawer(planets, PLANET_NUM, rend, planet_color, garbage_planet_color);   
+        trash_drawer(trash, N_TRASH, rend, trash_color);
 
         read_message(fd, message_type, &c, &d);
 
@@ -339,17 +294,4 @@ int main() {
     TTF_Quit();
     SDL_Quit();
     return 0;
-}
-
-SDL_Color random_color(){
-    SDL_Color color;
-    color.r = rand() % 256;
-    color.g = rand() % 256;
-    color.b = rand() % 256;
-    color.a = 100;
-    return color;
-}
-
-Uint32 SDL_ColorToUint(SDL_Color c){
-	return (Uint32)((c.a << 24) + (c.b << 16) + (c.g << 8)+ (c.r << 0));
 }

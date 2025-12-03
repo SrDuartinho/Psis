@@ -29,8 +29,8 @@ display.o: display.c display.h universe-data.h
 #
 # --- Server and Client ---
 #
-universe-server: universe-server.c universe-data.o communication.c communication.h gravitation.c gravitation.h
-	$(CC) $(CFLAGS) -o universe-server universe-server.c communication.c gravitation.c universe-data.o \
+universe-server: universe-server.c universe-data.o communication.c communication.h gravitation.c gravitation.h display.c display.h
+	$(CC) $(CFLAGS) -o universe-server universe-server.c communication.c gravitation.c display.c universe-data.o \
 		-lncurses -lzmq -lSDL2 -lSDL2_ttf -lSDL2_gfx -lSDL2_image -lm
 
 universe-client: universe-client.c universe-data.o communication.c communication.h
