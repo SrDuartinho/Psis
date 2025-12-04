@@ -213,6 +213,7 @@ int main() {
         planet_drawer(planets, PLANET_NUM, rend, planet_color, garbage_planet_color, font);   
         trash_drawer(trash, n_trash, rend, trash_color);
 
+        message_type[0] = '\0';  // initialize to empty
         read_message(fd, message_type, &c, &d);
 
         if (strcmp(message_type, "CONNECT") == 0) {
@@ -245,9 +246,7 @@ int main() {
             char resp[4] = {assigned_char, '\0', '\0', '\0'};
             send_response(fd, resp);
 
-        } else if (strcmp(message_type, "MOVE") == 0) {
-
-            int pos = find_ch_info(char_data, n_chars, c);
+        } else if (message_type[0] != '\0' && strcmp(message_type, "MOVE") == 0) {            int pos = find_ch_info(char_data, n_chars, c);
             if (pos != -1) {
 
                 int x = char_data[pos].position.x;
