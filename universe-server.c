@@ -177,7 +177,7 @@ int main() {
 
     // Initialize display
     SDL_Window* win = disp_init();
-    SDL_Rendserer* rend = rend_init(win);
+    SDL_Renderer* rend = rend_init(win);
     SDL_RenderPresent(rend);   
     
     SDL_Color planet_color = {80, 80, 186, 255};
