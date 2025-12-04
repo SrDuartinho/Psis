@@ -110,7 +110,7 @@ void scatter_trash(Ship* ship, Trash_t trash[], int* n_trash, int window_size)
 
 
 
-void draw_char(SDL_Renderer* r, TTF_Font* font, char c, int x, int y, SDL_Color ship_color) {
+void draw_char(SDL_Renderer* r, TTF_Font* font, char c, int x, int y, SDL_Color ship_color, int trash_count) {
     SDL_Color color = { 0, 0, 0, 255 };
 
     char text[2] = {c, 0};
@@ -126,6 +126,27 @@ void draw_char(SDL_Renderer* r, TTF_Font* font, char c, int x, int y, SDL_Color 
     SDL_FreeSurface(surface);
     SDL_RenderCopy(r, texture, NULL, &dest);
     SDL_DestroyTexture(texture);
+
+    // render trash count below the ship
+    char count_text[16];
+    snprintf(count_text, sizeof(count_text), "%d", trash_count);
+    SDL_Surface* cnt_surf = TTF_RenderText_Solid(font, count_text, color);
+    if (cnt_surf) {
+        SDL_Texture* cnt_tex = SDL_CreateTextureFromSurface(r, cnt_surf);
+        if (cnt_tex) {
+            SDL_Rect cnt_dst;
+            cnt_dst.w = cnt_surf->w;
+            cnt_dst.h = cnt_surf->h;
+            // center under the ship circle
+            int center_x = dest.x + 10;
+            int center_y = dest.y + 20;
+            cnt_dst.x = center_x - cnt_dst.w / 2;
+            cnt_dst.y = center_y + 20 + 2; // circle radius + small gap
+            SDL_RenderCopy(r, cnt_tex, NULL, &cnt_dst);
+            SDL_DestroyTexture(cnt_tex);
+        }
+        SDL_FreeSurface(cnt_surf);
+    }
 }
 
 int main() {
@@ -141,6 +162,8 @@ int main() {
     // To get a "random" seed, for the planets' position
     srand(time(NULL));
 
+    init_recycle_index();
+
     // Initialize planets
     Planet_t planets[PLANET_NUM];
     planets_init(planets, PLANET_NUM);
@@ -151,9 +174,6 @@ int main() {
     int n_trash = N_TRASH;   // start full or whatever number you want
     int aux_trash_recycle = 0; //auxiliar variable for printing information
     int aux_trash_spill = 0; //auxiliar variable for printing information
-    
-    //make the recycling planet
-    int planet_index = rand() % PLANET_NUM;
 
     // Initialize display
     SDL_Window* win = disp_init();
@@ -161,7 +181,7 @@ int main() {
     SDL_RenderPresent(rend);   
     
     SDL_Color planet_color = {80, 80, 186, 255};
-    SDL_Color garbage_planet_color = {20, 20, 186, 255};
+    SDL_Color garbage_planet_color = {20, 186, 20, 255};
     SDL_Color trash_color = {128, 128, 0, 255};
     SDL_Color ship_color = {186, 80, 80, 100};
 
@@ -189,7 +209,7 @@ int main() {
             }
         }
         
-        planet_drawer(planets, PLANET_NUM, rend, planet_color, garbage_planet_color);   
+        planet_drawer(planets, PLANET_NUM, rend, planet_color, garbage_planet_color, font);   
         trash_drawer(trash, n_trash, rend, trash_color);
 
         read_message(fd, message_type, &c, &d);
@@ -237,7 +257,7 @@ int main() {
             draw_char(rend, font,
                       char_data[i].ch,
                       char_data[i].position.x,
-                      char_data[i].position.y, ship_color);
+                      char_data[i].position.y, ship_color, char_data[i].trash_count);
         // Trash interaction
         for (int i = 0; i < n_chars; i++){
             for (int j = 0; j < n_trash; j++){
@@ -273,7 +293,7 @@ int main() {
                 float dy = (char_data[i].position.y + 10) - planets[j].x;
                 float distance = sqrt(dx * dx + dy * dy);
                 if (distance <= 20.0f) {  // within radius of 20
-                    if (j == planet_index) {
+                    if (j == RECYCLE_PLANET_INDEX) {
                         // move trash from ship to planet
                         transfer_trash_to_planet(&char_data[i], &planets[j]);
                         

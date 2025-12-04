@@ -4,7 +4,11 @@
 #include <time.h>
 #include "universe-data.h"
 
+int RECYCLE_PLANET_INDEX;  // definition
 
+void init_recycle_index(void) {
+    RECYCLE_PLANET_INDEX = rand() % PLANET_NUM;
+}
 
 Vector make_vector(float x, float y) {
     Vector v;
@@ -31,12 +35,12 @@ Vector add_vectors(Vector v1, Vector v2) {
 
 void planets_init(Planet_t* planets, int num_planets) {
     for (int i = 0; i < num_planets; i++) {
-        if(i == 0){
+        if(i == RECYCLE_PLANET_INDEX){
             planets[i].x = rand() % WINDOW_SIZE;
             planets[i].y = rand() % WINDOW_SIZE;
             planets[i].trash_count = 0;
             planets[i].mass = 10.0;
-            planets[i].name = 'A';
+            planets[i].name = 'A'+ i;
             planets[i].is_garbage = 1;
             continue;
         }

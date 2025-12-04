@@ -9,11 +9,14 @@
 #include "universe-data.h"
 #include "gravitation.h"
 #include "display.h"
+#include <SDL2/SDL_ttf.h>
 
 
 int main() {
     // To get a "random" seed, for the planets' position
     srand(time(NULL));
+    init_recycle_index();
+    
     // Initialize planets
     Planet_t planets[PLANET_NUM];
     //planets[0] = garbage collector planet; -> planets[0].is_garbage = 1;
@@ -26,8 +29,20 @@ int main() {
     // Initialize display
     SDL_Window* win = disp_init();
     SDL_Renderer* rend = rend_init(win);
-    SDL_RenderPresent(rend);   
-    
+    SDL_RenderPresent(rend);
+
+    // initialize TTF and font for labels
+    if (TTF_Init() != 0) {
+        printf("TTF init error: %s\n", TTF_GetError());
+        return 1;
+    }
+    TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 14);
+    if (!font) {
+        printf("Font error: %s\n", TTF_GetError());
+        // continue without labels
+        font = NULL;
+    }
+
     SDL_Color planet_color = {80, 80, 186, 255};
     SDL_Color garbage_planet_color = {20, 20, 186, 255};
     SDL_Color trash_color = {128, 128, 0, 255};
@@ -43,7 +58,7 @@ int main() {
             }
         }
         
-        planet_drawer(planets, PLANET_NUM, rend, planet_color, garbage_planet_color);   
+        planet_drawer(planets, PLANET_NUM, rend, planet_color, garbage_planet_color, font);
         trash_drawer(trash, N_TRASH, rend, trash_color);
         
         new_trash_acceleration(planets, PLANET_NUM, trash, N_TRASH);
@@ -53,6 +68,10 @@ int main() {
         SDL_Delay(10);
     }
 
+    if (font) {
+        TTF_CloseFont(font);
+        TTF_Quit();
+    }
     disp_close(rend, win);
     return 0;
 }

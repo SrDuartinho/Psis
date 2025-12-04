@@ -5,9 +5,10 @@
 #define UNIVERSE_DATA_H
 
 //Constants
-#define PLANET_NUM 2
-#define N_TRASH 10
+#define PLANET_NUM 6
+#define N_TRASH 20
 #define WINDOW_SIZE 1000
+extern int RECYCLE_PLANET_INDEX;  // declaration only
 
 //Type definitions
 typedef struct {

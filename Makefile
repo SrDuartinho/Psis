@@ -12,7 +12,7 @@ test: universe-server universe-client
 # --- Main program (universe-simulator) ---
 #
 program: $(OBJ)
-	$(CC) $(OBJ) -lm -o program -lSDL2 -lSDL2_gfx -lm
+	$(CC) $(OBJ) -lm -o program -lSDL2 -lSDL2_ttf -lSDL2_gfx -lm
 
 gravitation.o: gravitation.c gravitation.h universe-data.h
 	$(CC) $(CFLAGS) -c gravitation.c
@@ -38,7 +38,7 @@ universe-client: universe-client.c universe-data.o communication.c communication
 		-lncurses -lzmq -lm -lSDL2 -lSDL2_image
 
 universe-simulator: universe-simulator.o gravitation.o universe-data.o display.o
-	$(CC) $(CFLAGS) -o universe-simulator universe-simulator.o gravitation.o universe-data.o display.o -lSDL2 -lSDL2_gfx -lm
+	$(CC) $(CFLAGS) -o universe-simulator universe-simulator.o gravitation.o universe-data.o display.o -lSDL2 -lSDL2_ttf -lSDL2_gfx -lm
 
 clean:
 	rm -f *.o program universe-client universe-server universe-simulator
