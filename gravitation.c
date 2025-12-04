@@ -16,6 +16,8 @@ void correct_position(float *pos) {
 
 void new_trash_acceleration(Planet_t planets[], int total_planets,
                             Trash_t trash[], int total_trash) {
+    (void)total_planets;
+    (void)total_trash;
     Vector total_vector_force;
     Vector local_vector_force;
     for (int n_trash = 0; n_trash < N_TRASH; n_trash++) {
