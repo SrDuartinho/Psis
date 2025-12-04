@@ -26,19 +26,18 @@ int main(int argc,  char** argv){
 //    void * fd = create_client_channel(argv[1]);
     void * fd = create_client_channel("127.0.0.0");
 
-    char ch;
-    do{
-        printf("what is your character(a..z)?: ");
-        ch = getchar();
-        ch = tolower(ch);  
-    }while(!isalpha(ch));
-
-    send_connection_message(fd, ch);
+    char ch = '\0';
+    // ask server to assign the next available ship
+    send_connection_message(fd, ' ');
     char message[100];
     receive_response (fd, message);
-    if (strcmp(message, "NOT OK") ==0){
+    if (strcmp(message, "NOT OK") == 0){
+        fprintf(stderr, "No ships available on server\n");
         exit(-1);
     }
+    // server returns assigned character as first byte
+    if (message[0] != '\0') ch = message[0];
+    else { fprintf(stderr, "Invalid assignment from server\n"); exit(-1); }
 
     initialize_screen();
     int n = 0;

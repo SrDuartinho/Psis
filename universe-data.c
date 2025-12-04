@@ -42,6 +42,12 @@ void planets_init(Planet_t* planets, int num_planets) {
             planets[i].mass = 10.0;
             planets[i].name = 'A'+ i;
             planets[i].is_garbage = 1;
+            // initialize planet's default ship
+            planets[i].ship.ch = planets[i].name;
+            planets[i].ship.position.x = planets[i].x;
+            planets[i].ship.position.y = planets[i].y;
+            planets[i].ship.trash_count = 0;
+            planets[i].ship_assigned = 0;
             continue;
         }
         planets[i].x = rand() % WINDOW_SIZE;
@@ -50,6 +56,11 @@ void planets_init(Planet_t* planets, int num_planets) {
         planets[i].mass = 10.0;
         planets[i].name = 'A' + i;
         planets[i].is_garbage= 0;
+        planets[i].ship.ch = planets[i].name;
+        planets[i].ship.position.x = planets[i].x;
+        planets[i].ship.position.y = planets[i].y;
+        planets[i].ship.trash_count = 0;
+        planets[i].ship_assigned = 0;
     }
 
      for (int i = 0; i < num_planets; i++) {

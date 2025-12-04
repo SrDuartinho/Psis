@@ -3,7 +3,7 @@
 #include <string>
 #include <iostream>
 #include <zmq.h>
-#include "messages.pb.h"
+#include "proto/messages.pb.h"
 
 extern "C" {
 #include "communication.h"

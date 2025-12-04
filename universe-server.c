@@ -216,20 +216,33 @@ int main() {
 
         if (strcmp(message_type, "CONNECT") == 0) {
 
-            int pos = find_ch_info(char_data, n_chars, c);
-
-            if (pos == -1) {
-                send_response(fd, "OK");
-            } else {
+            // assign next available planet ship to this client
+            int assigned = -1;
+            for (int p = 0; p < PLANET_NUM; p++) {
+                if (!planets[p].ship_assigned) {
+                    assigned = p;
+                    break;
+                }
+            }
+            if (assigned == -1) {
                 send_response(fd, "NOT OK");
                 continue;
             }
 
-            char_data[n_chars].ch = c;
-            char_data[n_chars].position.x = WINDOW_SIZE / 2;
-            char_data[n_chars].position.y = WINDOW_SIZE / 2;
+            // assign the planet's ship to a new client
+            char assigned_char = planets[assigned].ship.ch;
+            // create client ship
+            char_data[n_chars].ch = assigned_char;
+            char_data[n_chars].position.x = planets[assigned].x;
+            char_data[n_chars].position.y = planets[assigned].y;
             char_data[n_chars].trash_count = 0;
+            // mark planet ship as assigned
+            planets[assigned].ship_assigned = 1;
             n_chars++;
+
+            // reply with the assigned character so client knows its ship
+            char resp[4] = {assigned_char, '\0', '\0', '\0'};
+            send_response(fd, resp);
 
         } else if (strcmp(message_type, "MOVE") == 0) {
 
@@ -267,14 +280,15 @@ int main() {
                 float dy = (char_data[i].position.y + 10) - trash[j].position.x;
                 float distance = sqrt(dx * dx + dy * dy);
                 if (distance <= 20.0f) {  // within radius of 20
-                // store trash in ship
-                if (char_data[i].trash_count < N_TRASH) {
+                // store trash in ship if not full
+                if (char_data[i].trash_count < SHIP_CAPACITY) {
                     char_data[i].trash[char_data[i].trash_count] = trash[j];
                     char_data[i].trash_count++;
+                    remove_trash(trash, &n_trash, j);
+                    j--;  // adjust index since we removed an element
+                } else {
+                    // ship full: cannot pick more
                 }
-
-                remove_trash(trash, &n_trash, j);
-                j--;  // adjust index since we removed an element
                 aux_trash_spill = n_trash;
                 aux_trash_recycle = N_TRASH - n_trash;
                 printf("Amount of trash in client %c: %d\n", char_data[i].ch, char_data[i].trash_count);
