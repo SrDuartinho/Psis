@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #include <ncurses.h>
 #include <ctype.h> 
 #include <string.h>
@@ -169,11 +168,4 @@ int main(int argc,  char** argv){
   	endwin();			/* End curses mode		  */
 
 	return 0;
-=======
-#include <stdio.h>
-
-int main() {
-    printf("Universe Client Running\n");
-    return 0;
->>>>>>> 84d48c9db7be704eacb687906b681cc480a8e123
 }
