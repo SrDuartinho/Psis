@@ -1,0 +1,23 @@
+syntax = "proto3";
+package universe;
+
+message Connect {
+  string ch = 1;
+}
+
+message Move {
+  string ch = 1;
+  string dir = 2;
+}
+
+message Response {
+  string text = 1;
+}
+
+message Envelope {
+  oneof payload {
+    Connect connect = 1;
+    Move move = 2;
+    Response response = 3;
+  }
+}
