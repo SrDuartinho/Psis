@@ -14,13 +14,14 @@ void correct_position(float *pos) {
     }
 }
 
+//MAX_TRASH_WORLD instead of N_TRASH to account for dynamically added trash
 void new_trash_acceleration(Planet_t planets[], int total_planets,
                             Trash_t trash[], int total_trash) {
     (void)total_planets;
     (void)total_trash;
     Vector total_vector_force;
     Vector local_vector_force;
-    for (int n_trash = 0; n_trash < N_TRASH; n_trash++) {
+    for (int n_trash = 0; n_trash <MAX_TRASH_WORLD; n_trash++) {
         total_vector_force.amplitude = 0;
         total_vector_force.angle = 0;
         for (int n_planet = 0; n_planet < PLANET_NUM; n_planet++) {

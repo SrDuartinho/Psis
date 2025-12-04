@@ -5,10 +5,11 @@
 #define UNIVERSE_DATA_H
 
 //Constants
-#define PLANET_NUM 6
-#define N_TRASH 20
+#define PLANET_NUM 40
+#define N_TRASH 4
 #define WINDOW_SIZE 1000
-#define SHIP_CAPACITY 5
+#define SHIP_CAPACITY 7
+#define MAX_TRASH_WORLD 6
 extern int RECYCLE_PLANET_INDEX;  // declaration only
 
 //Type definitions
@@ -48,11 +49,12 @@ typedef struct {
     int ship_assigned;
 } Planet_t;
 
-
 Vector make_vector(float x, float y);
 Vector add_vectors(Vector v1, Vector v2);
 void planets_init(Planet_t* planets, int num_planets);
 void trash_init(Trash_t* trash, int num_trash);
 void init_recycle_index(void);
+int generate_new_trash(Trash_t* trash, int current_trash, int x, int y);
+int trash_planet_collision(Trash_t* trash, Planet_t* planet);
 
 #endif
