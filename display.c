@@ -74,8 +74,38 @@ void trash_drawer(Trash_t* trash, int trash_num, SDL_Renderer* rend, SDL_Color t
 }
 
 void end_game(SDL_Renderer* rend, SDL_Window* win){
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Game Over", "Maximum trash capacity reached. Ending game.", NULL);
-    SDL_Delay(2000); // wait for 2 seconds before closing
+
+    TTF_Init();
+    TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48);
+    if (!font) {
+        printf("Font error: %s\n", TTF_GetError());
+        disp_close(rend, win);
+        exit(1);
+    }
+
+    SDL_Color backgroud_color = {255, 12, 12, 255};
+    SDL_Color object_color = {0, 0, 0, 255};
+    SDL_SetRenderDrawColor(rend, 
+        backgroud_color.r, backgroud_color.g, backgroud_color.b, 
+        backgroud_color.a);
+    SDL_RenderClear(rend);
+
+    SDL_Surface* textSurface = TTF_RenderText_Solid(font, "GAME OVER", object_color);
+    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(rend, textSurface);
+    SDL_FreeSurface(textSurface);
+
+    SDL_Rect textDest;
+    SDL_QueryTexture(textTexture, NULL, NULL, &textDest.w, &textDest.h); // Get texture dimensions
+    // Center the text on the screen
+    textDest.x = (WINDOW_SIZE - textDest.w) / 2;
+    textDest.y = (WINDOW_SIZE - textDest.h) / 2;
+    
+    SDL_RenderCopy(rend, textTexture, NULL, &textDest);
+    SDL_RenderPresent(rend);
+
+    // Wait for 5 seconds before closing
+    SDL_Delay(5000);
+        
     disp_close(rend, win);
     exit(0);
 }

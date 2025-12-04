@@ -54,14 +54,15 @@ int main() {
 
     //Arrays for collision detection, and frame counting, so that undesired trash generation is avoided
     
-    int trash_collided[MAX_TRASH_WORLD];
-    int frame_counter[MAX_TRASH_WORLD];
-    
+    //int trash_collided[MAX_TRASH_WORLD];
+    //int frame_counter[MAX_TRASH_WORLD];
+    /*
     for(int i = 0; i < MAX_TRASH_WORLD; i++){
         trash_collided[i] = 0;
         frame_counter[i] = 0;
     }
-    
+    */
+
     int ret;
     //Main loop
     int close = 0;
@@ -85,7 +86,7 @@ int main() {
                         close = 1;
                     }
                     else{
-                        trash_collided[i] = 1;
+                        //trash_collided[i] = 1;
                         trash_counter++;
                         printf("Trash counter incremented! Current trash count: %d\n", trash_counter);
                     }
