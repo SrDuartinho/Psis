@@ -51,5 +51,6 @@ Vector make_vector(float x, float y);
 Vector add_vectors(Vector v1, Vector v2);
 void planets_init(Planet_t* planets, int num_planets);
 void trash_init(Trash_t* trash, int num_trash);
+void init_recycle_index(void);
 
 #endif

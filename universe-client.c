@@ -19,6 +19,7 @@ void initialize_screen(){
 
 
 int main(int argc,  char** argv){
+    (void)argv;
     if (argc ==1){
 //        exit(-1);
     }
