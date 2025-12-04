@@ -54,14 +54,15 @@ int main() {
 
     //Arrays for collision detection, and frame counting, so that undesired trash generation is avoided
     
-    int trash_collided[MAX_TRASH_WORLD];
-    int frame_counter[MAX_TRASH_WORLD];
-    
+    //int trash_collided[MAX_TRASH_WORLD];
+    //int frame_counter[MAX_TRASH_WORLD];
+    /*
     for(int i = 0; i < MAX_TRASH_WORLD; i++){
         trash_collided[i] = 0;
         frame_counter[i] = 0;
     }
-    
+    */
+
     int ret;
     //Main loop
     int close = 0;
@@ -85,7 +86,7 @@ int main() {
                         close = 1;
                     }
                     else{
-                        trash_collided[i] = 1;
+                        //trash_collided[i] = 1;
                         trash_counter++;
                         printf("Trash counter incremented! Current trash count: %d\n", trash_counter);
                     }
@@ -97,6 +98,20 @@ int main() {
         new_trash_acceleration(planets, PLANET_NUM, trash, trash_counter);
         new_trash_velocity(trash, trash_counter);
         new_trash_position(trash, trash_counter);
+
+
+        //10 frames delay for collision flag reset
+        //To avoid multiple collisions being detected for the same trash object
+        /*for(int i = 0; i < trash_counter; i++){
+            if(trash_collided[i] == 1){
+                frame_counter[i]++;
+                if(frame_counter[i] >= 10){
+                    trash_collided[i] = 0;
+                    frame_counter[i] = 0;
+                }
+            }
+        }*/
+        
 
         SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
         SDL_RenderClear(rend);

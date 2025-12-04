@@ -9,7 +9,7 @@
 #define N_TRASH 4
 #define WINDOW_SIZE 1000
 #define SHIP_CAPACITY 7
-#define MAX_TRASH_WORLD 6
+#define MAX_TRASH_WORLD 5
 extern int RECYCLE_PLANET_INDEX;  // declaration only
 
 //Type definitions
