@@ -1,4 +1,5 @@
 #include "display.h"
+#include <time.h>
 #include <SDL2/SDL_ttf.h>
 
 
@@ -70,6 +71,13 @@ void trash_drawer(Trash_t* trash, int trash_num, SDL_Renderer* rend, SDL_Color t
             filledCircleColor(rend, trash[i].position.x, trash[i].position.y,
                                 4, SDL_ColorToUint(trash_color));
         }
+}
+
+void end_game(SDL_Renderer* rend, SDL_Window* win){
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Game Over", "Maximum trash capacity reached. Ending game.", NULL);
+    SDL_Delay(2000); // wait for 2 seconds before closing
+    disp_close(rend, win);
+    exit(0);
 }
 
 void disp_close(SDL_Renderer* rend, SDL_Window* win){

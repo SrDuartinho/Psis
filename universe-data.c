@@ -90,3 +90,42 @@ void trash_init(Trash_t* trash, int num_trash) {
         trash[i].mass = 1.0;
     }
 }
+
+int generate_new_trash(Trash_t* trash, int current_trash, int x, int y){
+    if (current_trash >= MAX_TRASH_WORLD) {
+        printf("Trash overflow.\n");
+        return -1;
+    }
+    else{
+        trash[current_trash].position.x = x + 2;
+        trash[current_trash].position.y = y + 2;
+        trash[current_trash].velocity.amplitude = 0;
+        trash[current_trash].velocity.angle = 0;
+        trash[current_trash].acceleration.amplitude = 0;
+        trash[current_trash].acceleration.angle = 0;
+        trash[current_trash].mass = 1.0;
+        return 1;
+    }
+}
+
+int trash_planet_collision(Trash_t* trash, Planet_t* planet){
+    float dx = trash->position.x - planet->x;
+    float dy = trash->position.y - planet->y;
+    
+    /*
+    float distance = sqrt(dx * dx + dy * dy);
+    //float collision_distance = 20.0 + 4.0; // planet radius + trash radius
+    float collision_distance = 1.0; // When their centers are 1 unit apart (touching each other)
+
+    if (distance <= collision_distance) {
+        return 1; // Collision detected
+    }
+    */
+
+    //fabs = abs, for float values
+    if (fabs(dx) < 1 && fabs(dy) < 1) {
+        return 1; // Collision detected
+    }
+    return 0; // No collision
+}
+    
