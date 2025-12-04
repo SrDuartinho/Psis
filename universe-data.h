@@ -5,7 +5,7 @@
 #define UNIVERSE_DATA_H
 
 //Constants
-#define PLANET_NUM 6
+#define PLANET_NUM 4
 #define N_TRASH 20
 #define WINDOW_SIZE 1000
 #define SHIP_CAPACITY 5
