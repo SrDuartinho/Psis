@@ -4,12 +4,12 @@
 #ifndef UNIVERSE_DATA_H
 #define UNIVERSE_DATA_H
 
-//Constants
-#define PLANET_NUM 40
-#define N_TRASH 4
-#define WINDOW_SIZE 1000
-#define SHIP_CAPACITY 7
-#define MAX_TRASH_WORLD 6
+//Constants 
+#define PLANET_NUM 10       //Total number of planets
+#define N_TRASH 10          //Total number of trash 
+#define WINDOW_SIZE 1000    //Window size
+#define SHIP_CAPACITY 5     //Maximum ammount of trash allowed in the ships
+#define MAX_TRASH_WORLD 20  //Maximum ammount of trash allowed in the world
 extern int RECYCLE_PLANET_INDEX;  // declaration only
 
 //Type definitions
