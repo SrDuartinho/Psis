@@ -15,6 +15,3 @@ void send_movement_message(void * fd, char ch, char  direction);
 void read_message (void * fd, char * message_type, char * c, direction_t *d );
 void send_response (void * fd, char * message);
 void receive_response (void * fd, char * message);
-
-
-

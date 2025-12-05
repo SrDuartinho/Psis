@@ -15,6 +15,9 @@ extern "C" void * create_server_channel(){
     void *responder = zmq_socket (context, ZMQ_REP);
     int response = zmq_bind (responder, "tcp://*:5555");
     (void)response;
+    // Set receive timeout to 10ms to allow responsive rendering and quit handling
+    int timeout = 10;
+    zmq_setsockopt(responder, ZMQ_RCVTIMEO, &timeout, sizeof(timeout));
     return responder;
 }
 

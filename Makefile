@@ -46,7 +46,7 @@ universe-client: proto/messages.pb.cc universe-client.c universe-data.o communic
 		-lncurses -lzmq -lprotobuf -lstdc++ -lm -lSDL2 -lSDL2_image
 
 universe-simulator: universe-simulator.o gravitation.o universe-data.o display.o
-	$(CC) $(CFLAGS) -o universe-simulator universe-simulator.o gravitation.o universe-data.o display.o -lSDL2 -lSDL2_ttf -lSDL2_gfx -lm
+	$(CC) $(CFLAGS) -o universe-simulator universe-simulator.o gravitation.o universe-data.o display.o -lSDL2 -lSDL2_ttf -lSDL2_gfx -lprotobuf -lstdc++ -lm
 
 clean:
 	rm -f *.o program universe-client universe-server universe-simulator

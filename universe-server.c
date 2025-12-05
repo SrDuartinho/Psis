@@ -171,9 +171,11 @@ int main() {
     // Initialize trash
     Trash_t trash[N_TRASH];
     trash_init(trash, N_TRASH);
-    int n_trash = N_TRASH;   // start full or whatever number you want
-    int aux_trash_recycle = 0; //auxiliar variable for printing information
-    int aux_trash_spill = 0; //auxiliar variable for printing information
+
+    int n_trash = N_TRASH;      //n_trash is the variable for the dynamic ammount of trash in the world
+    int aux_trash_recycle = 0;  //auxiliar variable for printing recycle information
+    int aux_trash_spill = 0;    //auxiliar variable for printing spill information
+    int aux_ship = 0;           //auxiliar variable for ship recycle warning
 
     // Initialize display
     SDL_Window* win = disp_init();
@@ -212,6 +214,7 @@ int main() {
         planet_drawer(planets, PLANET_NUM, rend, planet_color, garbage_planet_color, font);   
         trash_drawer(trash, n_trash, rend, trash_color);
 
+        message_type[0] = '\0';  // initialize to empty
         read_message(fd, message_type, &c, &d);
 
         if (strcmp(message_type, "CONNECT") == 0) {
@@ -244,9 +247,7 @@ int main() {
             char resp[4] = {assigned_char, '\0', '\0', '\0'};
             send_response(fd, resp);
 
-        } else if (strcmp(message_type, "MOVE") == 0) {
-
-            int pos = find_ch_info(char_data, n_chars, c);
+        } else if (message_type[0] != '\0' && strcmp(message_type, "MOVE") == 0) {            int pos = find_ch_info(char_data, n_chars, c);
             if (pos != -1) {
 
                 int x = char_data[pos].position.x;
@@ -256,8 +257,6 @@ int main() {
 
                 char_data[pos].position.x = x;
                 char_data[pos].position.y = y;
-                
-                //printf("%d %d\n", x, y);
                 
                 send_response(fd, "OK");
             }
@@ -271,38 +270,47 @@ int main() {
                       char_data[i].ch,
                       char_data[i].position.x,
                       char_data[i].position.y, ship_color, char_data[i].trash_count);
+
+        
         // Trash interaction
         for (int i = 0; i < n_chars; i++){
             for (int j = 0; j < n_trash; j++){
-                //printf("%f %f\n", trash[j].position.y, trash[j].position.x);
-                //fflush(stdout);
+
                 float dx = (char_data[i].position.x + 20) - trash[j].position.y;
                 float dy = (char_data[i].position.y + 10) - trash[j].position.x;
                 float distance = sqrt(dx * dx + dy * dy);
                 if (distance <= 20.0f) {  // within radius of 20
-                // store trash in ship if not full
-                if (char_data[i].trash_count < SHIP_CAPACITY) {
-                    char_data[i].trash[char_data[i].trash_count] = trash[j];
-                    char_data[i].trash_count++;
-                    remove_trash(trash, &n_trash, j);
-                    j--;  // adjust index since we removed an element
-                } else {
-                    // ship full: cannot pick more
+                    // store trash in ship if not full
+                    if (char_data[i].trash_count < SHIP_CAPACITY) {
+                        char_data[i].trash[char_data[i].trash_count] = trash[j];
+                        char_data[i].trash_count++;
+                        remove_trash(trash, &n_trash, j);
+                        j--;  // adjust index since we removed an element
+                    } else {
+                        // ship full: cannot pick more
+                    }
+                    aux_trash_spill = n_trash;
+                    aux_trash_recycle = N_TRASH - n_trash;
+                
+                    if (char_data[i].trash_count == SHIP_CAPACITY  && aux_ship == 0){
+                        printf("Ship %c is full with! Please go to recycling planet\n", char_data[i].ch, char_data[i].trash_count);
+                        fflush(stdout);
+                        aux_ship =1;
+                    }else{
+                        if (char_data[i].trash_count < SHIP_CAPACITY){
+                            printf("Amount of trash in client %c: %d\n", char_data[i].ch, char_data[i].trash_count);
+                            fflush(stdout);
+                            aux_ship =0;
+                        }
+                    }
+                
                 }
-                aux_trash_spill = n_trash;
-                aux_trash_recycle = N_TRASH - n_trash;
-                printf("Amount of trash in client %c: %d\n", char_data[i].ch, char_data[i].trash_count);
-                fflush(stdout);
-            }
             }
         }
 
         // Planet interaction
         for (int i = 0; i < n_chars; i++){
-            //printf("%d", char_data[i].trash);
             for (int j = 0; j < PLANET_NUM; j++){
-                //printf("%d %d\n", planets[j].y, planets[j].x);
-                //fflush(stdout);
                 float dx = (char_data[i].position.x + 20) - planets[j].y;
                 float dy = (char_data[i].position.y + 10) - planets[j].x;
                 float distance = sqrt(dx * dx + dy * dy);
