@@ -59,6 +59,45 @@ int find_ch_info(Ship arr[], int n, char ch) {
     return -1;
 }
 
+void generate_trash_periodically(Trash_t trash[], int* n_trash, Uint32* last_trash_time) {
+    Uint32 current_time = SDL_GetTicks();
+    
+    // Generate new trash every 10 seconds (10000 milliseconds)
+    if (current_time - *last_trash_time >= 10000) {
+        if (*n_trash < MAX_TRASH_WORLD) {
+            int random_x = rand() % WINDOW_SIZE;
+            int random_y = rand() % WINDOW_SIZE;
+            
+            generate_new_trash(trash, *n_trash, random_x, random_y);
+            (*n_trash)++;
+            
+            printf("New trash generated at position (%d, %d). Total trash: %d\n", random_x, random_y, *n_trash);
+            fflush(stdout);
+        }
+        
+        *last_trash_time = current_time;
+    }
+}
+
+void rotate_recycle_planet(Planet_t* planets, Uint32* last_planet_time) {
+    Uint32 current_time = SDL_GetTicks();
+    
+    // Rotate recycle planet every 30 seconds (30000 milliseconds)
+    if (current_time - *last_planet_time >= 30000) {
+        int old_index = RECYCLE_PLANET_INDEX;
+        RECYCLE_PLANET_INDEX = rand() % PLANET_NUM;
+        
+        planets[old_index].is_garbage = 0;
+        
+        planets[RECYCLE_PLANET_INDEX].is_garbage = 1;
+        
+        printf("Recycle planet changed from %c to %c\n", 'A' + old_index, 'A' + RECYCLE_PLANET_INDEX);
+        fflush(stdout);
+        
+        *last_planet_time = current_time;
+    }
+}
+
 void remove_trash(Trash_t trash[], int *n_trash, int index) {
     if (index < 0 || index >= *n_trash) return;
 
@@ -172,6 +211,7 @@ int main() {
     Trash_t trash[N_TRASH];
     trash_init(trash, N_TRASH);
 
+    int ret;
     int n_trash = N_TRASH;      //n_trash is the variable for the dynamic ammount of trash in the world
     int aux_trash_recycle = 0;  //auxiliar variable for printing recycle information
     int aux_trash_spill = 0;    //auxiliar variable for printing spill information
@@ -202,6 +242,11 @@ int main() {
     char c;
     direction_t d;
 
+    // Timer for trash generation
+    Uint32 last_trash_time = SDL_GetTicks();
+    // Timer for recycle planet rotation
+    Uint32 last_planet_time = SDL_GetTicks();
+
     int close = 0;
     while(close == 0){
         SDL_Event event;
@@ -213,6 +258,14 @@ int main() {
         
         planet_drawer(planets, PLANET_NUM, rend, planet_color, garbage_planet_color, font);   
         trash_drawer(trash, n_trash, rend, trash_color);
+
+        if (n_chars > 0){
+            // Generate new trash every 10 seconds
+            generate_trash_periodically(trash, &n_trash, &last_trash_time);
+        }
+        
+        // Rotate recycle planet every 30 seconds
+        rotate_recycle_planet(planets, &last_planet_time);
 
         message_type[0] = '\0';  // initialize to empty
         read_message(fd, message_type, &c, &d);
@@ -337,6 +390,29 @@ int main() {
                 }
             }
         }
+
+        for(int i = 0; i < n_trash; i++){
+            for(int j = 0; j < PLANET_NUM; j++){
+                if (n_chars > 0){
+                    if(trash_planet_collision(&trash[i],&planets[j]) == 1){
+                        ret = generate_new_trash(trash, n_trash, planets[j].x, planets[j].y);
+                        if (ret == -1) {
+                            printf("Ending game.\n");
+                            end_game(rend, win);
+                            close = 1;
+                        }
+                        else{
+                            n_trash++;
+                            printf("Trash counter incremented! Current trash count: %d\n", n_trash);
+                        }
+                        
+                    }
+                }
+            }   
+        }
+        new_trash_acceleration(planets, PLANET_NUM, trash, n_trash);
+        new_trash_velocity(trash, n_trash);
+        new_trash_position(trash, n_trash);
         SDL_RenderPresent(rend);
 
         SDL_Delay(10);

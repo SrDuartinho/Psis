@@ -65,7 +65,7 @@ int main() {
                 
         for(int i = 0; i < trash_counter; i++){
             for(int j = 0; j < PLANET_NUM; j++){
-                if(trash_planet_collision(&trash[i],&planets[j]) == 1 /*&& trash_collided[i] == 0*/){
+                if(trash_planet_collision(&trash[i],&planets[j]) == 1){
                     ret = generate_new_trash(trash, trash_counter, planets[j].x, planets[j].y);
                     if (ret == -1) {
                         printf("Ending game.\n");
@@ -73,7 +73,6 @@ int main() {
                         close = 1;
                     }
                     else{
-                        //trash_collided[i] = 1;
                         trash_counter++;
                         printf("Trash counter incremented! Current trash count: %d\n", trash_counter);
                     }
