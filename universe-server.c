@@ -293,7 +293,7 @@ int main() {
                     aux_trash_recycle = N_TRASH - n_trash;
                 
                     if (char_data[i].trash_count == SHIP_CAPACITY  && aux_ship == 0){
-                        printf("Ship %c is full with! Please go to recycling planet\n", char_data[i].ch, char_data[i].trash_count);
+                        printf("Ship %c is full with %d pieces of trash! Please go to recycling planet\n", char_data[i].ch, char_data[i].trash_count);
                         fflush(stdout);
                         aux_ship =1;
                     }else{
