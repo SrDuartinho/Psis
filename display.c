@@ -73,6 +73,56 @@ void trash_drawer(Trash_t* trash, int trash_num, SDL_Renderer* rend, SDL_Color t
         }
 }
 
+void ship_drawer(Ship* ships, int n_ships, SDL_Renderer* rend, SDL_Color ship_color, TTF_Font* font) {
+    SDL_Color text_color = {0, 0, 0, 255};
+    
+    for (int i = 0; i < n_ships; i++) {
+        int x = (int)ships[i].position.x;
+        int y = (int)ships[i].position.y;
+        
+        // Draw ship circle
+        filledCircleColor(rend, x , y , 20, SDL_ColorToUint(ship_color));
+
+        // Draw ship character
+        char text[2] = {ships[i].ch, 0};
+        SDL_Surface* surface = TTF_RenderText_Solid(font, text, text_color);
+        if (surface) {
+            SDL_Texture* texture = SDL_CreateTextureFromSurface(rend, surface);
+            if (texture) {
+                SDL_Rect dest;
+                dest.x = x - 10;
+                dest.y = y - 20;
+                dest.w = surface->w;
+                dest.h = surface->h;
+                SDL_RenderCopy(rend, texture, NULL, &dest);
+                SDL_DestroyTexture(texture);
+            }
+            SDL_FreeSurface(surface);
+        }
+        
+        // Draw trash count below the ship
+        char count_text[16];
+        snprintf(count_text, sizeof(count_text), "%d", ships[i].trash_count);
+        SDL_Surface* cnt_surf = TTF_RenderText_Solid(font, count_text, text_color);
+        if (cnt_surf) {
+            SDL_Texture* cnt_tex = SDL_CreateTextureFromSurface(rend, cnt_surf);
+            if (cnt_tex) {
+                SDL_Rect cnt_dst;
+                cnt_dst.w = cnt_surf->w;
+                cnt_dst.h = cnt_surf->h;
+                // center under the ship circle
+                int center_x = x;
+                int center_y = y;
+                cnt_dst.x = center_x - cnt_dst.w / 2;
+                cnt_dst.y = center_y + 20 + 2; // circle radius + small gap
+                SDL_RenderCopy(rend, cnt_tex, NULL, &cnt_dst);
+                SDL_DestroyTexture(cnt_tex);
+            }
+            SDL_FreeSurface(cnt_surf);
+        }
+    }
+}
+
 void end_game(SDL_Renderer* rend, SDL_Window* win){
 
     TTF_Init();

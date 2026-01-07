@@ -16,6 +16,7 @@ SDL_Color random_color();
 Uint32 SDL_ColorToUint(SDL_Color c);
 void planet_drawer(Planet_t* planets, int planets_num, SDL_Renderer* rend, SDL_Color planet_color, SDL_Color garbage_planet_color, TTF_Font* font);
 void trash_drawer(Trash_t* trash, int trash_num, SDL_Renderer* rend, SDL_Color trash_color);
+void ship_drawer(Ship* ships, int n_ships, SDL_Renderer* rend, SDL_Color ship_color, TTF_Font* font);
 void end_game(SDL_Renderer* rend, SDL_Window* win);
 
 #endif
