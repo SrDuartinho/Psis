@@ -11,6 +11,7 @@ test: new-universe-server new-trash-ship-client
 #
 # --- Main program (universe-simulator) ---
 #
+
 program: $(OBJ)
 	$(CC) $(OBJ) -lm -o program -lSDL2 -lSDL2_ttf -lSDL2_gfx -lm
 
@@ -30,6 +31,7 @@ universe-data.o: universe-data.c universe-data.h
 display.o: display.c display.h universe-data.h
 	$(CC) $(CFLAGS) -c display.c
 
+
 #
 # --- Server and Client ---
 #
@@ -39,10 +41,9 @@ new-universe-server: proto/messages.pb.cc new-universe-server.c cursor_processin
 		-lncurses -lzmq -lSDL2 -lSDL2_ttf -lSDL2_gfx -lSDL2_image -lprotobuf -lstdc++ -lm
 
 
-new-trash-ship-client: proto/messages.pb.cc new-trash-ship-client.c universe-data.o communication_proto.cpp communication.h
-	$(CC) $(CFLAGS) -o new-trash-ship-client new-trash-ship-client.c communication_proto.cpp proto/messages.pb.cc universe-data.o \
-		-lncurses -lzmq -lprotobuf -lstdc++ -lm -lSDL2 -lSDL2_image
-
+new-trash-ship-client: proto/messages.pb.cc new-trash-ship-client.c display.o universe-data.o communication_proto.cpp communication.h display.h
+	$(CC) $(CFLAGS) -o new-trash-ship-client new-trash-ship-client.c communication_proto.cpp proto/messages.pb.cc display.c universe-data.o \
+		-lncurses -lzmq -lprotobuf -lstdc++ -lm -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_gfx
 
 clean:
 	rm -f *.o program new-trash-ship-client new-universe-client new-universe-server

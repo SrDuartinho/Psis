@@ -118,6 +118,95 @@ void scatter_trash(Ship* ship, Trash_t trash[], int* n_trash, int window_size)
     ship->trash_count = 0;
 }
 
+
+
+/** 
+ * @brief Writes the current game statistics to "dashboard.txt".
+ * @param planets Array of planets.
+ * @param num_planets Number of planets.
+ * @param ships Array of ships.
+ * @param n_ships Number of ships.
+ * @param total_trash The current amount of trash in the world.
+ */
+void statistics_writer(Planet_t planets[], int num_planets, Ship ships[], int n_ships,
+    int total_trash) {
+    FILE *f;
+    f = fopen("dashboard.txt", "w");
+
+    if (f == NULL) {
+        perror("Error opening dashboard.txt");
+        return;
+    }
+
+    for(int i = 0; i < num_planets; i++) {
+        fprintf(f, "%c - %d\n", planets[i].name, planets[i].trash_count);
+    }
+
+    fprintf(f, "----\n");
+
+    for(int i = 0; i < n_ships; i++) {
+        fprintf(f, "%c - %d\n", ships[i].ch, ships[i].trash_count);
+    }
+
+    fprintf(f, "****\n");
+    fprintf(f, "%d %d", total_trash, MAX_TRASH_WORLD);
+    fclose(f);
+}
+
+/**
+ * @brief Handler function for client connections. Receives and processes the keystrokes 
+ * sent by the clients. Should be run in a separate thread for each client.
+ */
+void* client_handler(void* arg) {
+    //Each client has its own socket
+    void *fd = create_server_channel();
+    
+    char message_type[100];
+    char c;
+    direction_t d;
+
+    while (1) {
+        message_type[0] = '\0';  // initialize to empty
+        read_message(fd, message_type, &c, &d);
+        if (strcmp(message_type, "MOVE") == 0) {
+            // Handle movement command
+            // (Implementation omitted for brevity)
+        }
+        else if (strcmp(message_type, "DISCONNECT") == 0) {
+            // Handle disconnection
+            break;
+        }
+    }
+    return NULL;
+}
+
+
+/**
+ * @brief Removes a ship from the ships array and marks its corresponding planet's ship as unassigned.
+ * @param ships Array of ships.
+ * @param n_ships Pointer to the number of ships.
+ * @param index Index of the ship to be removed.
+ * @param planets Array of planets.
+ */
+void remove_ship(Ship ships[], int* n_ships, int index, Planet_t planets[]) {
+    if (index < 0 || index >= *n_ships) return;
+
+    // Find the corresponding planet and mark its ship as unassigned
+    for (int i = 0; i < PLANET_NUM; i++) {
+        if (planets[i].ship.ch == ships[index].ch) {
+            planets[i].ship_assigned = 0;
+            break;
+        }
+    }
+
+    // Shift all elements left
+    for (int j = index; j < *n_ships - 1; j++) {
+        ships[j] = ships[j + 1];
+    }
+
+    (*n_ships)--; // one less ship
+}
+
 int main() {
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -130,7 +219,6 @@ int main() {
     }
     // To get a "random" seed, for the planets' position
     srand(time(NULL));
-
     init_recycle_index();
 
     // Initialize planets
@@ -148,7 +236,7 @@ int main() {
     int aux_ship = 0;           //auxiliar variable for ship recycle warning
 
     // Initialize display
-    SDL_Window* win = disp_init();
+    SDL_Window* win = disp_init(0); //0 for server
     SDL_Renderer* rend = rend_init(win);
     SDL_RenderPresent(rend);   
     
@@ -157,16 +245,28 @@ int main() {
     SDL_Color trash_color = {128, 128, 0, 255};
     SDL_Color ship_color = {186, 80, 80, 100};
 
-    TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32);
-    if (!font) {
-        printf("Font error: %s\n", TTF_GetError());
+    // initialize TTF and font for labels
+    if (TTF_Init() != 0) {
+        printf("TTF init error: %s\n", TTF_GetError());
         return 1;
     }
+    TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 14);
+    if (!font) {
+        printf("Font error: %s\n", TTF_GetError());
+        // continue without labels
+        font = NULL;
+    }
 
-    void* fd = create_server_channel();
+    void* command_fd = create_server_channel();
+    int timeout = 10;  // 10ms timeout to avoid blocking
+    zmq_setsockopt(command_fd, ZMQ_RCVTIMEO, &timeout, sizeof(timeout));
 
-    Ship char_data[100];
-    int n_chars = 0;
+    void* context = zmq_ctx_new();
+    void* state_fd = zmq_socket(context, ZMQ_PUB);
+    zmq_bind(state_fd, "tcp://*:5556"); //Allow local and remote connections
+
+    Ship ships[100];
+    int n_ships = 0;
 
     char message_type[100];
     char c;
@@ -189,9 +289,9 @@ int main() {
         planet_drawer(planets, PLANET_NUM, rend, planet_color, garbage_planet_color, font);   
         trash_drawer(trash, n_trash, rend, trash_color);
         // Draw all ships
-        ship_drawer(char_data, n_chars, rend, ship_color, font);
+        ship_drawer(ships, n_ships, rend, ship_color, font);
 
-        if (n_chars > 0){
+        if (n_ships > 0){
             // Generate new trash every 10 seconds
             generate_trash_periodically(trash, &n_trash, &last_trash_time);
         }
@@ -200,7 +300,7 @@ int main() {
         rotate_recycle_planet(planets, &last_planet_time);
 
         message_type[0] = '\0';  // initialize to empty
-        read_message(fd, message_type, &c, &d);
+        read_message(command_fd, message_type, &c, &d);
 
         if (strcmp(message_type, "CONNECT") == 0) {
 
@@ -213,35 +313,35 @@ int main() {
                 }
             }
             if (assigned == -1) {
-                send_response(fd, "NOT OK");
+                send_response(command_fd, "NOT OK");
                 continue;
             }
 
             // assign the planet's ship to a new client
             char assigned_char = planets[assigned].ship.ch;
             // create client ship
-            char_data[n_chars].ch = assigned_char;
-            char_data[n_chars].position.x = planets[assigned].x;
-            char_data[n_chars].position.y = planets[assigned].y;
-            char_data[n_chars].velocity.amplitude = 0;
-            char_data[n_chars].velocity.angle = 0;
-            char_data[n_chars].acceleration.amplitude = 0;
-            char_data[n_chars].acceleration.angle = 0;
-            char_data[n_chars].mass = 1.0;
-            char_data[n_chars].trash_count = 0;
+            ships[n_ships].ch = assigned_char;
+            ships[n_ships].position.x = planets[assigned].x;
+            ships[n_ships].position.y = planets[assigned].y;
+            ships[n_ships].velocity.amplitude = 0;
+            ships[n_ships].velocity.angle = 0;
+            ships[n_ships].acceleration.amplitude = 0;
+            ships[n_ships].acceleration.angle = 0;
+            ships[n_ships].mass = 1.0;
+            ships[n_ships].trash_count = 0;
             // mark planet ship as assigned
             planets[assigned].ship_assigned = 1;
-            n_chars++;
+            n_ships++;
 
             // reply with the assigned character so client knows its ship
             char resp[4] = {assigned_char, '\0', '\0', '\0'};
-            send_response(fd, resp);
+            send_response(command_fd, resp);
 
-        } else if (message_type[0] != '\0' && strcmp(message_type, "MOVE") == 0) {            int pos = find_ch_info(char_data, n_chars, c);
+        } else if (message_type[0] != '\0' && strcmp(message_type, "MOVE") == 0) {            int pos = find_ch_info(ships, n_ships, c);
             if (pos != -1) {
                 // Apply thrust to the ship's velocity instead of teleporting position
-                new_position(&char_data[pos], d);
-                send_response(fd, "OK");
+                new_position(&ships[pos], d);
+                send_response(command_fd, "OK");
             }
         }
 
@@ -251,17 +351,17 @@ int main() {
 
         
         // Trash interaction
-        for (int i = 0; i < n_chars; i++){
+        for (int i = 0; i < n_ships; i++){
             for (int j = 0; j < n_trash; j++){
 
-                float dx = (char_data[i].position.x ) - trash[j].position.x;
-                float dy = (char_data[i].position.y ) - trash[j].position.y;
+                float dx = (ships[i].position.x ) - trash[j].position.x;
+                float dy = (ships[i].position.y ) - trash[j].position.y;
                 float distance = sqrt(dx * dx + dy * dy);
                 if (distance <= 20.0f) {  // within radius of 20
                     // store trash in ship if not full
-                    if (char_data[i].trash_count < SHIP_CAPACITY) {
-                        char_data[i].trash[char_data[i].trash_count] = trash[j];
-                        char_data[i].trash_count++;
+                    if (ships[i].trash_count < SHIP_CAPACITY) {
+                        ships[i].trash[ships[i].trash_count] = trash[j];
+                        ships[i].trash_count++;
                         remove_trash(trash, &n_trash, j);
                         j--;  // adjust index since we removed an element
                     } else {
@@ -270,13 +370,13 @@ int main() {
                     aux_trash_spill = n_trash;
                     aux_trash_recycle = N_TRASH - n_trash;
                 
-                    if (char_data[i].trash_count == SHIP_CAPACITY  && aux_ship == 0){
-                        printf("Ship %c is full with %d pieces of trash! Please go to recycling planet\n", char_data[i].ch, char_data[i].trash_count);
+                    if (ships[i].trash_count == SHIP_CAPACITY  && aux_ship == 0){
+                        printf("Ship %c is full with %d pieces of trash! Please go to recycling planet\n", ships[i].ch, ships[i].trash_count);
                         fflush(stdout);
                         aux_ship =1;
                     }else{
-                        if (char_data[i].trash_count < SHIP_CAPACITY){
-                            printf("Amount of trash in client %c: %d\n", char_data[i].ch, char_data[i].trash_count);
+                        if (ships[i].trash_count < SHIP_CAPACITY){
+                            printf("Amount of trash in client %c: %d\n", ships[i].ch, ships[i].trash_count);
                             fflush(stdout);
                             aux_ship =0;
                         }
@@ -287,28 +387,28 @@ int main() {
         }
 
         // Planet interaction
-        for (int i = 0; i < n_chars; i++){
+        for (int i = 0; i < n_ships; i++){
             for (int j = 0; j < PLANET_NUM; j++){
-                float dx = (char_data[i].position.x ) - planets[j].x;
-                float dy = (char_data[i].position.y ) - planets[j].y;
+                float dx = (ships[i].position.x ) - planets[j].x;
+                float dy = (ships[i].position.y ) - planets[j].y;
                 float distance = sqrt(dx * dx + dy * dy);
                 if (distance <= 20.0f) {  // within radius of 20
                     if (j == RECYCLE_PLANET_INDEX) {
                         // move trash from ship to planet
-                        transfer_trash_to_planet(&char_data[i], &planets[j]);
+                        transfer_trash_to_planet(&ships[i], &planets[j]);
                         
                         if (aux_trash_recycle == planets[j].trash_count){
                             printf("Ship %c delivered trash to planet %c! Planet now has %d pieces.\n",
-                                char_data[i].ch, planets[j].name, planets[j].trash_count);
+                                ships[i].ch, planets[j].name, planets[j].trash_count);
                             aux_trash_recycle = 0;
                         }
                     } else {
                         // ship crashes into other planet, scatter trash                       
-                        scatter_trash(&char_data[i], trash, &n_trash, WINDOW_SIZE);
+                        scatter_trash(&ships[i], trash, &n_trash, WINDOW_SIZE);
 
                         if (aux_trash_spill != n_trash){
                             printf("Ship %c crashed into %c and scattered its trash!\n",
-                                char_data[i].ch, planets[j].name);
+                                ships[i].ch, planets[j].name);
                             aux_trash_spill = n_trash;    
                         }
                     }
@@ -318,13 +418,15 @@ int main() {
 
         for(int i = 0; i < n_trash; i++){
             for(int j = 0; j < PLANET_NUM; j++){
-                if (n_chars > 0){
+                if (n_ships > 0){
                     if(trash_planet_collision(&trash[i],&planets[j]) == 1){
                         ret = generate_new_trash(trash, n_trash, planets[j].x, planets[j].y);
                         if (ret == -1) {
                             printf("Ending game.\n");
+                            send_game_state(state_fd, NULL, 0, NULL, 0, NULL, 0); //Notify clients of the game endinf
                             end_game(rend, win);
                             close = 1;
+                            break;  
                         }
                         else{
                             n_trash++;
@@ -333,17 +435,26 @@ int main() {
                         
                     }
                 }
-            }   
+                if (close == 1){    //Exit nested loops
+                    break;
+                }   
+            }
         }
-        
+
+        if (close == 1){    // To avoid further processing after game end
+            break;
+        }
         new_trash_acceleration(planets, PLANET_NUM, trash, n_trash);
         new_trash_velocity(trash, n_trash);
         new_trash_position(trash, n_trash);
 
         
-        new_ship_acceleration(planets, PLANET_NUM, char_data, n_chars);
-        new_ship_velocity(char_data, n_chars);
-        new_ship_position(char_data, n_chars);
+        new_ship_acceleration(planets, PLANET_NUM, ships, n_ships);
+        new_ship_velocity(ships, n_ships);
+        new_ship_position(ships, n_ships);
+        
+        // Broadcast game state to all clients
+        send_game_state(state_fd, ships, n_ships, planets, PLANET_NUM, trash, n_trash);
         
         SDL_RenderPresent(rend);
 

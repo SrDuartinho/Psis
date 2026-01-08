@@ -9,7 +9,7 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-SDL_Window* disp_init();
+SDL_Window* disp_init(int client_server);
 SDL_Renderer* rend_init(SDL_Window* win);
 void disp_close(SDL_Renderer* rend, SDL_Window* win);
 SDL_Color random_color();
@@ -18,5 +18,5 @@ void planet_drawer(Planet_t* planets, int planets_num, SDL_Renderer* rend, SDL_C
 void trash_drawer(Trash_t* trash, int trash_num, SDL_Renderer* rend, SDL_Color trash_color);
 void ship_drawer(Ship* ships, int n_ships, SDL_Renderer* rend, SDL_Color ship_color, TTF_Font* font);
 void end_game(SDL_Renderer* rend, SDL_Window* win);
-
+void draw_char(SDL_Renderer* r, TTF_Font* font, char c, int x, int y, SDL_Color ship_color, int trash_count);
 #endif
