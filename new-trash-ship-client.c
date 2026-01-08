@@ -34,7 +34,7 @@ void* info_receiver(void * fd){
     int n_ships = 0;
     Planet_t planets[PLANET_NUM];
     int n_planets = 0;
-    Trash_t trash[N_TRASH];
+    Trash_t trash[MAX_TRASH_WORLD];
     int n_trash = 0;
 
     int client_server = 1; //1 for client, 0 for server
@@ -109,6 +109,12 @@ void* info_receiver(void * fd){
 }
 
 int main(){
+
+    if (load_game_config("libconfig/universe.conf") != 0) {
+        printf("Using default configuration (could not load config file).\n");
+    } else {
+        printf("Loaded configuration from libconfig/universe.conf.\n");
+    }
 
     // Using two sockets to communicate with the server
     // One socket for sending movement commands, and receiving a short response (REQ/REP)

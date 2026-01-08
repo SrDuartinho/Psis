@@ -8,23 +8,21 @@
 
 void correct_position(float *pos) {
     if (*pos < 0) {
-        *pos = WINDOW_SIZE + *pos;
-    } else if (*pos >= WINDOW_SIZE) {
-        *pos = *pos - WINDOW_SIZE;
+        *pos = g_config.window_size + *pos;
+    } else if (*pos >= g_config.window_size) {
+        *pos = *pos - g_config.window_size;
     }
 }
 
 //MAX_TRASH_WORLD instead of N_TRASH to account for dynamically added trash
 void new_trash_acceleration(Planet_t planets[], int total_planets,
                             Trash_t trash[], int total_trash) {
-    (void)total_planets;
-    (void)total_trash;
     Vector total_vector_force;
     Vector local_vector_force;
-    for (int n_trash = 0; n_trash < MAX_TRASH_WORLD; n_trash++) {
+    for (int n_trash = 0; n_trash < total_trash; n_trash++) {
         total_vector_force.amplitude = 0;
         total_vector_force.angle = 0;
-        for (int n_planet = 0; n_planet < PLANET_NUM; n_planet++) {
+        for (int n_planet = 0; n_planet < total_planets; n_planet++) {
             float force_vector_x = planets[n_planet].x - trash[n_trash].position.x;
             float force_vector_y = planets[n_planet].y - trash[n_trash].position.y;
             local_vector_force = make_vector(force_vector_x, force_vector_y);
@@ -60,14 +58,12 @@ void new_trash_position(Trash_t trash[], int total_trash) {
 //SHIP PHYSICS
 void new_ship_acceleration(Planet_t planets[], int total_planets,
                             Ship ships[], int total_ships) {
-    (void)total_planets;
-    (void)total_ships;
     Vector total_vector_force;
     Vector local_vector_force;
     for (int n_ship = 0; n_ship < total_ships; n_ship++) {
         total_vector_force.amplitude = 0;
         total_vector_force.angle = 0;
-        for (int n_planet = 0; n_planet < PLANET_NUM; n_planet++) {
+        for (int n_planet = 0; n_planet < total_planets; n_planet++) {
             float force_vector_x = planets[n_planet].x - ships[n_ship].position.x;
             float force_vector_y = planets[n_planet].y - ships[n_ship].position.y;
             local_vector_force = make_vector(force_vector_x, force_vector_y);

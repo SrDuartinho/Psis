@@ -22,7 +22,7 @@ SDL_Window* disp_init(int client_server){
     win = SDL_CreateWindow(title,
                                     SDL_WINDOWPOS_CENTERED,
                                     SDL_WINDOWPOS_CENTERED,
-                                    WINDOW_SIZE, WINDOW_SIZE, 0);
+                                    g_config.window_size, g_config.window_size, 0);
     return win;                                
 }
 
@@ -202,8 +202,8 @@ void end_game(SDL_Renderer* rend, SDL_Window* win){
     SDL_Rect textDest;
     SDL_QueryTexture(textTexture, NULL, NULL, &textDest.w, &textDest.h); // Get texture dimensions
     // Center the text on the screen
-    textDest.x = (WINDOW_SIZE - textDest.w) / 2;
-    textDest.y = (WINDOW_SIZE - textDest.h) / 2;
+    textDest.x = (g_config.window_size - textDest.w) / 2;
+    textDest.y = (g_config.window_size - textDest.h) / 2;
     
     SDL_RenderCopy(rend, textTexture, NULL, &textDest);
     SDL_RenderPresent(rend);
