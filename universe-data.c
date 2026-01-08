@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <math.h>
 #include <time.h>
 #include "universe-data.h"
@@ -46,6 +47,11 @@ void planets_init(Planet_t* planets, int num_planets) {
             planets[i].ship.ch = planets[i].name;
             planets[i].ship.position.x = planets[i].x;
             planets[i].ship.position.y = planets[i].y;
+            planets[i].ship.velocity.amplitude = 0;
+            planets[i].ship.acceleration.amplitude = 0;
+            planets[i].ship.velocity.angle = 0;
+            planets[i].ship.acceleration.angle = 0;
+            planets[i].ship.mass = 1.0;
             planets[i].ship.trash_count = 0;
             planets[i].ship_assigned = 0;
             continue;
@@ -59,6 +65,11 @@ void planets_init(Planet_t* planets, int num_planets) {
         planets[i].ship.ch = planets[i].name;
         planets[i].ship.position.x = planets[i].x;
         planets[i].ship.position.y = planets[i].y;
+        planets[i].ship.velocity.amplitude = 0;
+        planets[i].ship.acceleration.amplitude = 0;
+        planets[i].ship.velocity.angle = 0;
+        planets[i].ship.acceleration.angle = 0;
+        planets[i].ship.mass = 1.0;
         planets[i].ship.trash_count = 0;
         planets[i].ship_assigned = 0;
     }

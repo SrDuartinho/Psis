@@ -6,8 +6,9 @@
 #include <time.h>
 #include <math.h>
 #include "communication.h"
+#include "cursor_processing.h"
 #include "universe-data.h"
-#include "gravitation.h"
+#include "physics-rules.h"
 #include "display.h"
 #include "SDL2/SDL2_gfxPrimitives.h"
 #include "SDL2/SDL_pixels.h"
@@ -23,40 +24,50 @@ direction_t random_direction() {
     return rand() % 4;
 }
 
-void new_position(int* x, int* y, direction_t direction) {
-    switch (direction) {
-        case UP:
-            (*x) = (*x)-5;
-            if (*x < 0) {
-                *x = WINDOW_SIZE + *x; 
-            }
-            break;
-        case DOWN:
-            (*x)= (*x)+5;
-            if (*x > WINDOW_SIZE-1) {
-                *x = *x - WINDOW_SIZE; 
-            }
-            break;
-        case LEFT:
-            (*y)= (*y)-5;
-            if (*y < 0) {
-                *y = WINDOW_SIZE + *y; 
-            }
-            break;
-        case RIGHT:
-            (*y)= (*y)+5;
-            if (*y > WINDOW_SIZE-1) {
-                *y = *y - WINDOW_SIZE; 
-            }
-            break;
-    }
-}
-
 int find_ch_info(Ship arr[], int n, char ch) {
     for (int i = 0; i < n; i++)
         if (arr[i].ch == ch)
             return i;
     return -1;
+}
+
+void generate_trash_periodically(Trash_t trash[], int* n_trash, Uint32* last_trash_time) {
+    Uint32 current_time = SDL_GetTicks();
+    
+    // Generate new trash every 10 seconds (10000 milliseconds)
+    if (current_time - *last_trash_time >= 10000) {
+        if (*n_trash < MAX_TRASH_WORLD) {
+            int random_x = rand() % WINDOW_SIZE;
+            int random_y = rand() % WINDOW_SIZE;
+            
+            generate_new_trash(trash, *n_trash, random_x, random_y);
+            (*n_trash)++;
+            
+            printf("New trash generated at position (%d, %d). Total trash: %d\n", random_x, random_y, *n_trash);
+            fflush(stdout);
+        }
+        
+        *last_trash_time = current_time;
+    }
+}
+
+void rotate_recycle_planet(Planet_t* planets, Uint32* last_planet_time) {
+    Uint32 current_time = SDL_GetTicks();
+    
+    // Rotate recycle planet every 30 seconds (30000 milliseconds)
+    if (current_time - *last_planet_time >= 30000) {
+        int old_index = RECYCLE_PLANET_INDEX;
+        RECYCLE_PLANET_INDEX = rand() % PLANET_NUM;
+        
+        planets[old_index].is_garbage = 0;
+        
+        planets[RECYCLE_PLANET_INDEX].is_garbage = 1;
+        
+        printf("Recycle planet changed from %c to %c\n", 'A' + old_index, 'A' + RECYCLE_PLANET_INDEX);
+        fflush(stdout);
+        
+        *last_planet_time = current_time;
+    }
 }
 
 void remove_trash(Trash_t trash[], int *n_trash, int index) {
@@ -90,7 +101,7 @@ void scatter_trash(Ship* ship, Trash_t trash[], int* n_trash, int window_size)
     for (int i = 0; i < ship->trash_count; i++) {
 
         // don't overflow global trash array
-        if (*n_trash >= N_TRASH)
+        if (*n_trash >= MAX_TRASH_WORLD)
             break;
 
         // copy the trash
@@ -105,48 +116,6 @@ void scatter_trash(Ship* ship, Trash_t trash[], int* n_trash, int window_size)
 
     // all trash thrown out -> ship is empty
     ship->trash_count = 0;
-}
-
-
-
-
-void draw_char(SDL_Renderer* r, TTF_Font* font, char c, int x, int y, SDL_Color ship_color, int trash_count) {
-    SDL_Color color = { 0, 0, 0, 255 };
-
-    char text[2] = {c, 0};
-    SDL_Surface* surface = TTF_RenderText_Solid(font, text, color);
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(r, surface);
-
-    SDL_Rect dest;
-    dest.x = y;
-    dest.y = x;
-    dest.w = surface->w;
-    dest.h = surface->h;
-    filledCircleColor(r, dest.x + 10, dest.y +20, 20, SDL_ColorToUint(ship_color));
-    SDL_FreeSurface(surface);
-    SDL_RenderCopy(r, texture, NULL, &dest);
-    SDL_DestroyTexture(texture);
-
-    // render trash count below the ship
-    char count_text[16];
-    snprintf(count_text, sizeof(count_text), "%d", trash_count);
-    SDL_Surface* cnt_surf = TTF_RenderText_Solid(font, count_text, color);
-    if (cnt_surf) {
-        SDL_Texture* cnt_tex = SDL_CreateTextureFromSurface(r, cnt_surf);
-        if (cnt_tex) {
-            SDL_Rect cnt_dst;
-            cnt_dst.w = cnt_surf->w;
-            cnt_dst.h = cnt_surf->h;
-            // center under the ship circle
-            int center_x = dest.x + 10;
-            int center_y = dest.y + 20;
-            cnt_dst.x = center_x - cnt_dst.w / 2;
-            cnt_dst.y = center_y + 20 + 2; // circle radius + small gap
-            SDL_RenderCopy(r, cnt_tex, NULL, &cnt_dst);
-            SDL_DestroyTexture(cnt_tex);
-        }
-        SDL_FreeSurface(cnt_surf);
-    }
 }
 
 int main() {
@@ -169,9 +138,10 @@ int main() {
     planets_init(planets, PLANET_NUM);
 
     // Initialize trash
-    Trash_t trash[N_TRASH];
+    Trash_t trash[MAX_TRASH_WORLD];
     trash_init(trash, N_TRASH);
 
+    int ret;
     int n_trash = N_TRASH;      //n_trash is the variable for the dynamic ammount of trash in the world
     int aux_trash_recycle = 0;  //auxiliar variable for printing recycle information
     int aux_trash_spill = 0;    //auxiliar variable for printing spill information
@@ -202,6 +172,11 @@ int main() {
     char c;
     direction_t d;
 
+    // Timer for trash generation
+    Uint32 last_trash_time = SDL_GetTicks();
+    // Timer for recycle planet rotation
+    Uint32 last_planet_time = SDL_GetTicks();
+
     int close = 0;
     while(close == 0){
         SDL_Event event;
@@ -213,6 +188,16 @@ int main() {
         
         planet_drawer(planets, PLANET_NUM, rend, planet_color, garbage_planet_color, font);   
         trash_drawer(trash, n_trash, rend, trash_color);
+        // Draw all ships
+        ship_drawer(char_data, n_chars, rend, ship_color, font);
+
+        if (n_chars > 0){
+            // Generate new trash every 10 seconds
+            generate_trash_periodically(trash, &n_trash, &last_trash_time);
+        }
+        
+        // Rotate recycle planet every 30 seconds
+        rotate_recycle_planet(planets, &last_planet_time);
 
         message_type[0] = '\0';  // initialize to empty
         read_message(fd, message_type, &c, &d);
@@ -238,6 +223,11 @@ int main() {
             char_data[n_chars].ch = assigned_char;
             char_data[n_chars].position.x = planets[assigned].x;
             char_data[n_chars].position.y = planets[assigned].y;
+            char_data[n_chars].velocity.amplitude = 0;
+            char_data[n_chars].velocity.angle = 0;
+            char_data[n_chars].acceleration.amplitude = 0;
+            char_data[n_chars].acceleration.angle = 0;
+            char_data[n_chars].mass = 1.0;
             char_data[n_chars].trash_count = 0;
             // mark planet ship as assigned
             planets[assigned].ship_assigned = 1;
@@ -249,35 +239,23 @@ int main() {
 
         } else if (message_type[0] != '\0' && strcmp(message_type, "MOVE") == 0) {            int pos = find_ch_info(char_data, n_chars, c);
             if (pos != -1) {
-
-                int x = char_data[pos].position.x;
-                int y = char_data[pos].position.y;
-
-                new_position(&x, &y, d);
-
-                char_data[pos].position.x = x;
-                char_data[pos].position.y = y;
-                
+                // Apply thrust to the ship's velocity instead of teleporting position
+                new_position(&char_data[pos], d);
                 send_response(fd, "OK");
             }
         }
 
         
 
-        // Draw all characters
-        for (int i = 0; i < n_chars; i++)
-            draw_char(rend, font,
-                      char_data[i].ch,
-                      char_data[i].position.x,
-                      char_data[i].position.y, ship_color, char_data[i].trash_count);
+
 
         
         // Trash interaction
         for (int i = 0; i < n_chars; i++){
             for (int j = 0; j < n_trash; j++){
 
-                float dx = (char_data[i].position.x + 20) - trash[j].position.y;
-                float dy = (char_data[i].position.y + 10) - trash[j].position.x;
+                float dx = (char_data[i].position.x ) - trash[j].position.x;
+                float dy = (char_data[i].position.y ) - trash[j].position.y;
                 float distance = sqrt(dx * dx + dy * dy);
                 if (distance <= 20.0f) {  // within radius of 20
                     // store trash in ship if not full
@@ -293,7 +271,7 @@ int main() {
                     aux_trash_recycle = N_TRASH - n_trash;
                 
                     if (char_data[i].trash_count == SHIP_CAPACITY  && aux_ship == 0){
-                        printf("Ship %c is full with! Please go to recycling planet\n", char_data[i].ch, char_data[i].trash_count);
+                        printf("Ship %c is full with %d pieces of trash! Please go to recycling planet\n", char_data[i].ch, char_data[i].trash_count);
                         fflush(stdout);
                         aux_ship =1;
                     }else{
@@ -311,8 +289,8 @@ int main() {
         // Planet interaction
         for (int i = 0; i < n_chars; i++){
             for (int j = 0; j < PLANET_NUM; j++){
-                float dx = (char_data[i].position.x + 20) - planets[j].y;
-                float dy = (char_data[i].position.y + 10) - planets[j].x;
+                float dx = (char_data[i].position.x ) - planets[j].x;
+                float dy = (char_data[i].position.y ) - planets[j].y;
                 float distance = sqrt(dx * dx + dy * dy);
                 if (distance <= 20.0f) {  // within radius of 20
                     if (j == RECYCLE_PLANET_INDEX) {
@@ -337,6 +315,36 @@ int main() {
                 }
             }
         }
+
+        for(int i = 0; i < n_trash; i++){
+            for(int j = 0; j < PLANET_NUM; j++){
+                if (n_chars > 0){
+                    if(trash_planet_collision(&trash[i],&planets[j]) == 1){
+                        ret = generate_new_trash(trash, n_trash, planets[j].x, planets[j].y);
+                        if (ret == -1) {
+                            printf("Ending game.\n");
+                            end_game(rend, win);
+                            close = 1;
+                        }
+                        else{
+                            n_trash++;
+                            printf("Trash counter incremented! Current trash count: %d\n", n_trash);
+                        }
+                        
+                    }
+                }
+            }   
+        }
+        
+        new_trash_acceleration(planets, PLANET_NUM, trash, n_trash);
+        new_trash_velocity(trash, n_trash);
+        new_trash_position(trash, n_trash);
+
+        
+        new_ship_acceleration(planets, PLANET_NUM, char_data, n_chars);
+        new_ship_velocity(char_data, n_chars);
+        new_ship_position(char_data, n_chars);
+        
         SDL_RenderPresent(rend);
 
         SDL_Delay(10);
