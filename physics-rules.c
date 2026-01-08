@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "gravitation.h"
+#include "physics-rules.h"
 #include "universe-data.h"
 
 

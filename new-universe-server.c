@@ -6,8 +6,9 @@
 #include <time.h>
 #include <math.h>
 #include "communication.h"
+#include "cursor_processing.h"
 #include "universe-data.h"
-#include "gravitation.h"
+#include "physics-rules.h"
 #include "display.h"
 #include "SDL2/SDL2_gfxPrimitives.h"
 #include "SDL2/SDL_pixels.h"
@@ -21,26 +22,6 @@ Uint32 SDL_ColorToUint(SDL_Color c);
 
 direction_t random_direction() {
     return rand() % 4;
-}
-
-// Apply a thrust impulse to the ship's velocity based on direction.
-// Position is not changed here; physics loop updates it.
-void new_position(Ship* ship, direction_t direction) {
-    float angle;
-    switch (direction) {
-        case UP:    angle = -M_PI / 2.0f; break;   // negative Y
-        case DOWN:  angle =  M_PI / 2.0f; break;   // positive Y
-        case LEFT:  angle =  M_PI;         break;  // negative X
-        case RIGHT: angle =  0.0f;         break;  // positive X
-        default:    return; // ignore unknown inputs
-    }
-
-    const float thrust = 0.1f; // magnitude of thrust impulse per key press
-    float vx = thrust * cosf(angle);
-    float vy = thrust * sinf(angle);
-
-    Vector thrust_vec = make_vector(vx, vy);
-    ship->velocity = add_vectors(ship->velocity, thrust_vec);
 }
 
 int find_ch_info(Ship arr[], int n, char ch) {
