@@ -13,7 +13,7 @@ test: new-universe-server new-trash-ship-client
 #
 
 program: $(OBJ)
-	$(CC) $(OBJ) -lm -o program -lSDL2 -lSDL2_ttf -lSDL2_gfx -lm
+	$(CC) $(OBJ) -lm -o program -lSDL2 -lSDL2_ttf -lSDL2_gfx -lm -lconfig
 
 
 PROTO_SRC = proto/messages.proto
@@ -38,12 +38,12 @@ display.o: display.c display.h universe-data.h
 
 new-universe-server: proto/messages.pb.cc new-universe-server.c cursor_processing.c physics-rules.c universe-data.o communication_proto.cpp communication.h cursor_processing.h physics-rules.h display.c display.h
 	$(CC) $(CFLAGS) -o new-universe-server new-universe-server.c cursor_processing.c physics-rules.c communication_proto.cpp proto/messages.pb.cc display.c universe-data.o \
-		-lncurses -lzmq -lSDL2 -lSDL2_ttf -lSDL2_gfx -lSDL2_image -lprotobuf -lstdc++ -lm -lpthread
+		-lncurses -lzmq -lSDL2 -lSDL2_ttf -lSDL2_gfx -lSDL2_image -lprotobuf -lstdc++ -lm -lpthread -lconfig
 
 
 new-trash-ship-client: proto/messages.pb.cc new-trash-ship-client.c display.o universe-data.o communication_proto.cpp communication.h display.h
 	$(CC) $(CFLAGS) -o new-trash-ship-client new-trash-ship-client.c communication_proto.cpp proto/messages.pb.cc display.c universe-data.o \
-		-lncurses -lzmq -lprotobuf -lstdc++ -lm -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_gfx
+		-lncurses -lzmq -lprotobuf -lstdc++ -lm -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_gfx -lpthread -lconfig
 
 clean:
 	rm -f *.o program new-trash-ship-client new-universe-client new-universe-server

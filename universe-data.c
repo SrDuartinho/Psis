@@ -3,12 +3,59 @@
 #include <time.h>
 #include <math.h>
 #include <time.h>
+#include <libconfig.h>
 #include "universe-data.h"
 
 int RECYCLE_PLANET_INDEX;  // definition
+GameConfig g_config = {
+    .planet_num = PLANET_NUM,
+    .trash_amount = N_TRASH,
+    .window_size = WINDOW_SIZE,
+    .ship_capacity = SHIP_CAPACITY,
+    .max_trash_world = MAX_TRASH_WORLD
+};
+
+static int clamp_int(int value, int min_v, int max_v) {
+    if (value < min_v) return min_v;
+    if (value > max_v) return max_v;
+    return value;
+}
+
+int load_game_config(const char *path) {
+    config_t cfg;
+    config_init(&cfg);
+
+    if (!config_read_file(&cfg, path)) {
+        fprintf(stderr, "Config file error at %s:%d - %s\n",
+                config_error_file(&cfg),
+                config_error_line(&cfg),
+                config_error_text(&cfg));
+        config_destroy(&cfg);
+        return -1;
+    }
+
+    GameConfig new_cfg = g_config; // start from defaults
+
+    config_lookup_int(&cfg, "planet_num", &new_cfg.planet_num);
+    config_lookup_int(&cfg, "trash_amount", &new_cfg.trash_amount);
+    config_lookup_int(&cfg, "window_size", &new_cfg.window_size);
+    config_lookup_int(&cfg, "ship_capacity", &new_cfg.ship_capacity);
+    config_lookup_int(&cfg, "max_trash_world", &new_cfg.max_trash_world);
+
+    // Enforce compile-time limits to avoid overruns
+    new_cfg.planet_num = clamp_int(new_cfg.planet_num, 1, PLANET_NUM);
+    new_cfg.trash_amount = clamp_int(new_cfg.trash_amount, 0, N_TRASH);
+    new_cfg.window_size = clamp_int(new_cfg.window_size, 100, 5000);
+    new_cfg.ship_capacity = clamp_int(new_cfg.ship_capacity, 1, SHIP_CAPACITY);
+    new_cfg.max_trash_world = clamp_int(new_cfg.max_trash_world, 1, MAX_TRASH_WORLD);
+
+    g_config = new_cfg;
+    config_destroy(&cfg);
+    return 0;
+}
 
 void init_recycle_index(void) {
-    RECYCLE_PLANET_INDEX = rand() % PLANET_NUM;
+    RECYCLE_PLANET_INDEX = rand() % g_config.planet_num;
 }
 
 Vector make_vector(float x, float y) {
@@ -37,8 +84,8 @@ Vector add_vectors(Vector v1, Vector v2) {
 void planets_init(Planet_t* planets, int num_planets) {
     for (int i = 0; i < num_planets; i++) {
         if(i == RECYCLE_PLANET_INDEX){
-            planets[i].x = rand() % WINDOW_SIZE;
-            planets[i].y = rand() % WINDOW_SIZE;
+            planets[i].x = rand() % g_config.window_size;
+            planets[i].y = rand() % g_config.window_size;
             planets[i].trash_count = 0;
             planets[i].mass = 10.0;
             planets[i].name = 'A'+ i;
@@ -56,8 +103,8 @@ void planets_init(Planet_t* planets, int num_planets) {
             planets[i].ship_assigned = 0;
             continue;
         }
-        planets[i].x = rand() % WINDOW_SIZE;
-        planets[i].y = rand() % WINDOW_SIZE;
+        planets[i].x = rand() % g_config.window_size;
+        planets[i].y = rand() % g_config.window_size;
         planets[i].trash_count = 0;
         planets[i].mass = 10.0;
         planets[i].name = 'A' + i;
@@ -79,8 +126,8 @@ void planets_init(Planet_t* planets, int num_planets) {
             // Check if planet i and j have the same coordinates
             if (planets[i].x == planets[j].x && planets[i].y == planets[j].y) {
                 // If they do, regenerate new coordinates.
-                planets[j].x = rand() % WINDOW_SIZE;
-                planets[j].y = rand() % WINDOW_SIZE;
+                planets[j].x = rand() % g_config.window_size;
+                planets[j].y = rand() % g_config.window_size;
                 
                 // Restart the check for the modified planet j from the beginning
                 i = 0; 
@@ -92,8 +139,8 @@ void planets_init(Planet_t* planets, int num_planets) {
 
 void trash_init(Trash_t* trash, int num_trash) {
     for (int i = 0; i < num_trash; i++) {
-        trash[i].position.x = rand() % WINDOW_SIZE;
-        trash[i].position.y = rand() % WINDOW_SIZE;
+        trash[i].position.x = rand() % g_config.window_size;
+        trash[i].position.y = rand() % g_config.window_size;
         trash[i].velocity.amplitude = 0;
         trash[i].acceleration.amplitude = 0;
         trash[i].velocity.angle = 0;
@@ -103,7 +150,7 @@ void trash_init(Trash_t* trash, int num_trash) {
 }
 
 int generate_new_trash(Trash_t* trash, int current_trash, int x, int y){
-    if (current_trash >= MAX_TRASH_WORLD) {
+    if (current_trash >= g_config.max_trash_world) {
         printf("Trash overflow.\n");
         return -1;
     }

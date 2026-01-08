@@ -110,6 +110,12 @@ void* info_receiver(void * fd){
 
 int main(){
 
+    if (load_game_config("libconfig/universe.conf") != 0) {
+        printf("Using default configuration (could not load config file).\n");
+    } else {
+        printf("Loaded configuration from libconfig/universe.conf.\n");
+    }
+
     // Using two sockets to communicate with the server
     // One socket for sending movement commands, and receiving a short response (REQ/REP)
     // Another for receiving game state, and sending a short acknowledgment (PUB/SUB)

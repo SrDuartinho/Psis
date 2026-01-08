@@ -46,9 +46,9 @@ void generate_trash_periodically(Trash_t trash[], int* n_trash, Uint32* last_tra
     
     // Generate new trash every 10 seconds (10000 milliseconds)
     if (current_time - *last_trash_time >= 10000) {
-        if (*n_trash < MAX_TRASH_WORLD) {
-            int random_x = rand() % WINDOW_SIZE;
-            int random_y = rand() % WINDOW_SIZE;
+        if (*n_trash < g_config.max_trash_world) {
+            int random_x = rand() % g_config.window_size;
+            int random_y = rand() % g_config.window_size;
             
             generate_new_trash(trash, *n_trash, random_x, random_y);
             (*n_trash)++;
@@ -67,7 +67,7 @@ void rotate_recycle_planet(Planet_t* planets, Uint32* last_planet_time) {
     // Rotate recycle planet every 30 seconds (30000 milliseconds)
     if (current_time - *last_planet_time >= 30000) {
         int old_index = RECYCLE_PLANET_INDEX;
-        RECYCLE_PLANET_INDEX = rand() % PLANET_NUM;
+        RECYCLE_PLANET_INDEX = rand() % g_config.planet_num;
         
         planets[old_index].is_garbage = 0;
         
@@ -111,7 +111,7 @@ void scatter_trash(Ship* ship, Trash_t trash[], int* n_trash, int window_size)
     for (int i = 0; i < ship->trash_count; i++) {
 
         // don't overflow global trash array
-        if (*n_trash >= MAX_TRASH_WORLD)
+        if (*n_trash >= g_config.max_trash_world)
             break;
 
         // copy the trash
@@ -150,7 +150,7 @@ void remove_ship(Ship ships[], int* n_ships, int index, Planet_t planets[]) {
     if (index < 0 || index >= *n_ships) return;
 
     // Find the corresponding planet and mark its ship as unassigned
-    for (int i = 0; i < PLANET_NUM; i++) {
+    for (int i = 0; i < g_config.planet_num; i++) {
         if (planets[i].ship.ch == ships[index].ch) {
             planets[i].ship_assigned = 0;
             break;
@@ -165,8 +165,8 @@ void remove_ship(Ship ships[], int* n_ships, int index, Planet_t planets[]) {
     (*n_ships)--; // one less ship
 }
 
-void statistics_writer(Planet_t planets[], int num_planets, Ship ships[], int n_ships, int total_trash) {
-
+void statistics_writer(Planet_t planets[], int num_planets, Ship ships[], int n_ships,
+    int total_trash) {
     FILE *f;
     f = fopen("dashboard.txt", "w");
 
@@ -192,7 +192,7 @@ void statistics_writer(Planet_t planets[], int num_planets, Ship ships[], int n_
     }
 
     fprintf(f, "****\n");
-    fprintf(f, "%d %d", total_trash, MAX_TRASH_WORLD);
+    fprintf(f, "%d %d", total_trash, g_config.max_trash_world);
     fclose(f);
 }
 
@@ -242,6 +242,12 @@ void* client_handler(void* arg) {
 
 int main() {
 
+    if (load_game_config("libconfig/universe.conf") != 0) {
+        printf("Using default configuration (could not load config file).\n");
+    } else {
+        printf("Loaded configuration from libconfig/universe.conf.\n");
+    }
+
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         printf("SDL init error: %s\n", SDL_GetError());
         return 1;
@@ -256,14 +262,14 @@ int main() {
 
     // Initialize planets
     Planet_t planets[PLANET_NUM];
-    planets_init(planets, PLANET_NUM);
+    planets_init(planets, g_config.planet_num);
 
     // Initialize trash
     Trash_t trash[MAX_TRASH_WORLD];
-    trash_init(trash, N_TRASH);
+    trash_init(trash, g_config.trash_amount);
 
     int ret;
-    int n_trash = N_TRASH;      //n_trash is the variable for the dynamic ammount of trash in the world
+    int n_trash = g_config.trash_amount;      //n_trash is the variable for the dynamic ammount of trash in the world
     int aux_trash_recycle = 0;  //auxiliar variable for printing recycle information
     int aux_trash_spill = 0;    //auxiliar variable for printing spill information
     int aux_ship = 0;           //auxiliar variable for ship recycle warning
@@ -320,7 +326,7 @@ int main() {
             }
         }
         
-        planet_drawer(planets, PLANET_NUM, rend, planet_color, garbage_planet_color, font);   
+        planet_drawer(planets, g_config.planet_num, rend, planet_color, garbage_planet_color, font);   
         trash_drawer(trash, n_trash, rend, trash_color);
         // Draw all ships
         ship_drawer(ships, n_ships, rend, ship_color, font);
@@ -340,7 +346,7 @@ int main() {
 
             // assign next available planet ship to this client
             int assigned = -1;
-            for (int p = 0; p < PLANET_NUM; p++) {
+            for (int p = 0; p < g_config.planet_num; p++) {
                 if (!planets[p].ship_assigned) {
                     assigned = p;
                     break;
@@ -395,7 +401,7 @@ int main() {
                 float distance = sqrt(dx * dx + dy * dy);
                 if (distance <= 20.0f) {  // within radius of 20
                     // store trash in ship if not full
-                    if (ships[i].trash_count < SHIP_CAPACITY) {
+                    if (ships[i].trash_count < g_config.ship_capacity) {
                         ships[i].trash[ships[i].trash_count] = trash[j];
                         ships[i].trash_count++;
                         remove_trash(trash, &n_trash, j);
@@ -404,14 +410,14 @@ int main() {
                         // ship full: cannot pick more
                     }
                     aux_trash_spill = n_trash;
-                    aux_trash_recycle = N_TRASH - n_trash;
+                    aux_trash_recycle = g_config.max_trash_world - n_trash;
                 
-                    if (ships[i].trash_count == SHIP_CAPACITY  && aux_ship == 0){
+                    if (ships[i].trash_count == g_config.ship_capacity  && aux_ship == 0){
                         printf("Ship %c is full with %d pieces of trash! Please go to recycling planet\n", ships[i].ch, ships[i].trash_count);
                         fflush(stdout);
                         aux_ship =1;
                     }else{
-                        if (ships[i].trash_count < SHIP_CAPACITY){
+                        if (ships[i].trash_count < g_config.ship_capacity){
                             printf("Amount of trash in client %c: %d\n", ships[i].ch, ships[i].trash_count);
                             fflush(stdout);
                             aux_ship =0;
@@ -424,7 +430,7 @@ int main() {
 
         // Planet interaction
         for (int i = 0; i < n_ships; i++){
-            for (int j = 0; j < PLANET_NUM; j++){
+            for (int j = 0; j < g_config.planet_num; j++){
                 float dx = (ships[i].position.x ) - planets[j].x;
                 float dy = (ships[i].position.y ) - planets[j].y;
                 float distance = sqrt(dx * dx + dy * dy);
@@ -440,7 +446,7 @@ int main() {
                         }
                     } else {
                         // ship crashes into other planet, scatter trash                       
-                        scatter_trash(&ships[i], trash, &n_trash, WINDOW_SIZE);
+                        scatter_trash(&ships[i], trash, &n_trash, g_config.window_size);
 
                         if (aux_trash_spill != n_trash){
                             printf("Ship %c crashed into %c and scattered its trash!\n",
@@ -453,7 +459,7 @@ int main() {
         }
 
         for(int i = 0; i < n_trash; i++){
-            for(int j = 0; j < PLANET_NUM; j++){
+            for(int j = 0; j < g_config.planet_num; j++){
                 if (n_ships > 0){
                     if(trash_planet_collision(&trash[i],&planets[j]) == 1){
                         ret = generate_new_trash(trash, n_trash, planets[j].x, planets[j].y);
@@ -481,19 +487,19 @@ int main() {
         if (close == 1){    // To avoid further processing after game end
             break;
         }
-        new_trash_acceleration(planets, PLANET_NUM, trash, n_trash);
+        new_trash_acceleration(planets, g_config.planet_num, trash, n_trash);
         new_trash_velocity(trash, n_trash);
         new_trash_position(trash, n_trash);
 
         
-        new_ship_acceleration(planets, PLANET_NUM, ships, n_ships);
+        new_ship_acceleration(planets, g_config.planet_num, ships, n_ships);
         new_ship_velocity(ships, n_ships);
         new_ship_position(ships, n_ships);
 
         statistics_writer(planets, PLANET_NUM, ships, n_ships, n_trash);
         
         // Broadcast game state to all clients
-        send_game_state(state_fd, ships, n_ships, planets, PLANET_NUM, trash, n_trash);
+        send_game_state(state_fd, ships, n_ships, planets, g_config.planet_num, trash, n_trash);
         
         SDL_RenderPresent(rend);
 
