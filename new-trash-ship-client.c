@@ -115,7 +115,7 @@ int main(){
     } else {
         printf("Loaded configuration from libconfig/universe.conf.\n");
     }
-
+    int my_port;
     // Using two sockets to communicate with the server
     // One socket for sending movement commands, and receiving a short response (REQ/REP)
     // Another for receiving game state, and sending a short acknowledgment (PUB/SUB)
@@ -136,9 +136,20 @@ int main(){
         exit(-1);
     }
     // server returns assigned character as first byte
-    if (message[0] != '\0') ch = message[0];
-    else { fprintf(stderr, "Invalid assignment from server\n"); exit(-1); }
+    sscanf(message, "%c %d", &ch, &my_port);
+    
+    zmq_close(movement_fd);  // Close old socket
+    
+    void* my_context = zmq_ctx_new();
+    movement_fd = zmq_socket(my_context, ZMQ_REQ);
+    char my_address[64];
+    snprintf(my_address, sizeof(my_address), "tcp://127.0.0.1:%d", my_port);
+    zmq_connect(movement_fd, my_address);
 
+    printf("Assigned ship character: %c, connected to port: %d\n", ch, my_port);
+
+    printf("Assigned ship character: %d\n", my_port);
+    
     int n = 0;
     int key;
     direction_t direction;

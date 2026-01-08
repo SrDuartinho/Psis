@@ -24,10 +24,9 @@ typedef struct{
     Ship* ships;
     int* n_ships;
     Planet_t* planets;
-    Trash_t* trash;
-    int* n_trash;
     pthread_mutex_t* mutex;
-    void *state_fd;
+    char client_ch;  // The character assigned to this client
+    int port; // The port number to be assigned to the client
 }ThreadData_t;
 
 direction_t random_direction() {
@@ -202,22 +201,27 @@ void statistics_writer(Planet_t planets[], int num_planets, Ship ships[], int n_
  * @param: void arg* a ThreadData_t struct containing all necessary data for the thread to operate.
  * @return: NULL
  */
-void* client_handler(void* arg) {
-    //Each client has its own socket
-    void *command_fd = create_server_channel();
-    int timeout = 10;  // 10ms timeout to avoid blocking
-    zmq_setsockopt(command_fd, ZMQ_RCVTIMEO, &timeout, sizeof(int)); //10ms timeout to avoid blocking
-    
+void* client_handler(void* arg){
     //Unpack thread data
     ThreadData_t* data = (ThreadData_t*)arg;
     Ship* ships = data->ships;
     int* n_ships = data->n_ships;
     Planet_t* planets = data->planets;
-    Trash_t* trash = data->trash;
-    int* n_trash = data->n_trash;
     pthread_mutex_t* mutex = data->mutex;
-    void* state_fd = data->state_fd;
+    char client_ch = data->client_ch;
+    int port = data->port;
+    
+    //Each client has its own socket. Didn't use the create_server_channel() function to allow port assignment.
+    void *context = zmq_ctx_new();
+    void *command_fd = zmq_socket (context, ZMQ_REP);
+    
+    char bind_address[50];
+    sprintf(bind_address, "tcp://*:%d", port);
+    zmq_bind(command_fd, bind_address);
 
+    int timeout = 10;  // 10ms timeout to avoid blocking
+    zmq_setsockopt(command_fd, ZMQ_RCVTIMEO, &timeout, sizeof(int)); //10ms timeout to avoid blocking
+    
     char message_type[100];
     char c = '\0';
     direction_t d;
@@ -225,17 +229,38 @@ void* client_handler(void* arg) {
     while (1) {
         message_type[0] = '\0';  // initialize to empty
         read_message(command_fd, message_type, &c, &d);
-        if(strcmp(message_type, "CONNECT") == 0) {
-            // Handle connection request
-        } 
-        else if(strcmp(message_type, "MOVE") == 0) {
-            if(d == 'q'){
-            //
+        if (message_type[0] != '\0' && strcmp(message_type, "MOVE") == 0) { 
+            pthread_mutex_lock(mutex);           
+            int pos = find_ch_info(ships, *n_ships, c);
+            if (d == 'q'){
+                // remove ship from array
+                if (pos == -1) {
+                    // Ship not found, possibly already removed
+                    send_response(command_fd, "OK");
+                    pthread_mutex_unlock(mutex);
+                    break;
+                }
+                remove_ship(ships, n_ships, pos, planets);
+                send_response(command_fd, "OK");
+                printf("Ship %c has quit the game.\n", c);
+                pthread_mutex_unlock(mutex);
+                break;
             }
-            // Lock mutex before accessing shared data
-            // pthread_mutex_lock(mutex);
+            if (pos != -1) {
+                // Apply thrust to the ship's velocity instead of teleporting position
+                new_position(&ships[pos], d);
+                send_response(command_fd, "OK");
+            }
+            
+
+            pthread_mutex_unlock(mutex);
         }
     }
+    //Clean up
+    free(data);
+    zmq_close(command_fd);
+    zmq_ctx_destroy(context);
+    printf("Client handler thread for ship %c exiting.\n", client_ch);
     return NULL;
 }
 
@@ -315,7 +340,9 @@ int main() {
     Uint32 last_trash_time = SDL_GetTicks();
     // Timer for recycle planet rotation
     Uint32 last_planet_time = SDL_GetTicks();
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
+    int thread_port = 6000; // Starting port for client threads
     int close = 0;
     while(close == 0){
         SDL_Event event;
@@ -359,6 +386,10 @@ int main() {
 
             // assign the planet's ship to a new client
             char assigned_char = planets[assigned].ship.ch;
+
+            //Using mutex so that two threads don't modify shared data simultaneously
+            pthread_mutex_lock(&mutex);
+
             // create client ship
             ships[n_ships].ch = assigned_char;
             ships[n_ships].position.x = planets[assigned].x;
@@ -373,25 +404,30 @@ int main() {
             planets[assigned].ship_assigned = 1;
             n_ships++;
 
-            // reply with the assigned character so client knows its ship
-            char resp[4] = {assigned_char, '\0', '\0', '\0'};
-            send_response(command_fd, resp);
+            pthread_mutex_unlock(&mutex);
+            
+            //Data to be passed to the thread
+            ThreadData_t* thread_data = malloc(sizeof(ThreadData_t));
+            thread_data->ships = ships;
+            thread_data->n_ships = &n_ships;
+            thread_data->planets = planets;
+            thread_data->mutex = &mutex;
+            thread_data->client_ch = assigned_char;
+            thread_data->port = thread_port;
 
-        } else if (message_type[0] != '\0' && strcmp(message_type, "MOVE") == 0) {            int pos = find_ch_info(ships, n_ships, c);
-            if (d == 'q'){
-                // remove ship from array
-                remove_ship(ships, &n_ships, pos, planets);
-                send_response(command_fd, "OK");
-                printf("Ship %c has quit the game.\n", c);
-            }
-            if (pos != -1) {
-                // Apply thrust to the ship's velocity instead of teleporting position
-                new_position(&ships[pos], d);
-                send_response(command_fd, "OK");
-            }
+            pthread_t client_thread;
+            pthread_create(&client_thread, NULL, client_handler, thread_data);
+            pthread_detach(client_thread); // Detach thread to avoid memory leaks
+
+            // reply with the assigned character so client knows its ship
+            char resp[32];
+
+            snprintf(resp, sizeof(resp), "%c %d", assigned_char, thread_port);
+            send_response(command_fd, resp);
+            thread_port++; // Increment port for next client
         }
 
-    
+        pthread_mutex_lock(&mutex);
         // Trash interaction
         for (int i = 0; i < n_ships; i++){
             for (int j = 0; j < n_trash; j++){
@@ -483,6 +519,8 @@ int main() {
                 }   
             }
         }
+        
+        pthread_mutex_unlock(&mutex);
 
         if (close == 1){    // To avoid further processing after game end
             break;
@@ -496,7 +534,7 @@ int main() {
         new_ship_velocity(ships, n_ships);
         new_ship_position(ships, n_ships);
 
-        statistics_writer(planets, PLANET_NUM, ships, n_ships, n_trash);
+        statistics_writer(planets, g_config.planet_num, ships, n_ships, n_trash);
         
         // Broadcast game state to all clients
         send_game_state(state_fd, ships, n_ships, planets, g_config.planet_num, trash, n_trash);
