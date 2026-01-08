@@ -175,6 +175,12 @@ void statistics_writer(Planet_t planets[], int num_planets, Ship ships[], int n_
         return;
     }
 
+    if(planets == NULL && ships == NULL){
+        fprintf(f, "END\n");
+        fclose(f);
+        return;
+    }
+
     for(int i = 0; i < num_planets; i++) {
         fprintf(f, "%c - %d\n", planets[i].name, planets[i].trash_count);
     }
@@ -315,6 +321,7 @@ int main() {
         SDL_Event event;
         while(SDL_PollEvent(&event)){
             if (event.type == SDL_QUIT){
+                send_game_state(state_fd, NULL, 0, NULL, 0, NULL, 0); // Indicate game end to clients
                 close = 1;
             }
         }
@@ -459,6 +466,7 @@ int main() {
                         if (ret == -1) {
                             printf("Ending game.\n");
                             send_game_state(state_fd, NULL, 0, NULL, 0, NULL, 0); //Notify clients of the game endinf
+                            statistics_writer(NULL, 0, NULL, 0, 0);
                             end_game(rend, win);
                             close = 1;
                             break;  
@@ -487,6 +495,8 @@ int main() {
         new_ship_acceleration(planets, g_config.planet_num, ships, n_ships);
         new_ship_velocity(ships, n_ships);
         new_ship_position(ships, n_ships);
+
+        statistics_writer(planets, PLANET_NUM, ships, n_ships, n_trash);
         
         // Broadcast game state to all clients
         send_game_state(state_fd, ships, n_ships, planets, g_config.planet_num, trash, n_trash);

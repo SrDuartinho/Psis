@@ -18,7 +18,7 @@ program: $(OBJ)
 
 PROTO_SRC = proto/messages.proto
 
-proto/messages.pb.cc proto/messages.pb.h: $(PROTO_SRC)
+proto/messges.pb.cc proto/messages.pb.h: $(PROTO_SRC)
 	protoc --cpp_out=proto $(PROTO_SRC)
 
 physics-rules.o: physics-rules.c physics-rules.h universe-data.h
