@@ -4,13 +4,25 @@
 #ifndef UNIVERSE_DATA_H
 #define UNIVERSE_DATA_H
 
-//Constants 
-#define PLANET_NUM 10       //Total number of planets
-#define N_TRASH 10          //Total number of trash 
-#define WINDOW_SIZE 1000    //Window size
-#define SHIP_CAPACITY 5     //Maximum ammount of trash allowed in the ships
-#define MAX_TRASH_WORLD 20  //Maximum ammount of trash allowed in the world
+//Constants (act as compile-time maxima / defaults)
+#define PLANET_NUM 30       //Total number of planets (max/default)
+#define N_TRASH 100          //Total number of trash (default initial amount)
+#define WINDOW_SIZE 2000    //Window size (pixels)
+#define SHIP_CAPACITY 50     //Maximum ammount of trash allowed in the ships
+#define MAX_TRASH_WORLD 100  //Maximum ammount of trash allowed in the world
 extern int RECYCLE_PLANET_INDEX;  // declaration only
+
+// Runtime configuration (loaded from .conf, falls back to defaults above)
+typedef struct {
+    int planet_num;
+    int trash_amount;
+    int window_size;
+    int ship_capacity;
+    int max_trash_world;
+} GameConfig;
+
+extern GameConfig g_config;
+int load_game_config(const char *path);
 
 //Type definitions
 typedef struct {
