@@ -33,6 +33,9 @@ typedef struct {
 typedef struct {
     Trash_t trash[N_TRASH];
     Position_t position;
+    Vector velocity;
+    Vector acceleration;
+    float mass;
     int trash_count;
     char ch;
 } Ship;

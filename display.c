@@ -3,17 +3,26 @@
 #include <SDL2/SDL_ttf.h>
 
 
-SDL_Window* disp_init(){
+SDL_Window* disp_init(int client_server){
     // initialize SDL
+
+    SDL_Window* win;
+    char title[20];
+    if(client_server){ 
+        strcpy(title, "Universe Client");
+    }
+    else{
+        strcpy(title, "Universe Server");
+    }
+
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         printf("error initializing SDL: %s\n", SDL_GetError());
     }
-    
-    SDL_Window* win = SDL_CreateWindow("UNIVERSE SIMULATOR",
-                                       SDL_WINDOWPOS_CENTERED,
-                                       SDL_WINDOWPOS_CENTERED,
-                                       WINDOW_SIZE, WINDOW_SIZE, 0);
 
+    win = SDL_CreateWindow(title,
+                                    SDL_WINDOWPOS_CENTERED,
+                                    SDL_WINDOWPOS_CENTERED,
+                                    WINDOW_SIZE, WINDOW_SIZE, 0);
     return win;                                
 }
 
@@ -107,7 +116,6 @@ void end_game(SDL_Renderer* rend, SDL_Window* win){
     SDL_Delay(5000);
         
     disp_close(rend, win);
-    exit(0);
 }
 
 void disp_close(SDL_Renderer* rend, SDL_Window* win){
@@ -132,4 +140,44 @@ SDL_Color random_color(){
 
 Uint32 SDL_ColorToUint(SDL_Color c){
 	return (Uint32)((c.a << 24) + (c.b << 16) + (c.g << 8)+ (c.r << 0));
+}
+
+
+void draw_char(SDL_Renderer* r, TTF_Font* font, char c, int x, int y, SDL_Color ship_color, int trash_count) {
+    SDL_Color color = { 0, 0, 0, 255 };
+
+    char text[2] = {c, 0};
+    SDL_Surface* surface = TTF_RenderText_Solid(font, text, color);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(r, surface);
+
+    SDL_Rect dest;
+    dest.x = y;
+    dest.y = x;
+    dest.w = surface->w;
+    dest.h = surface->h;
+    filledCircleColor(r, dest.x + 10, dest.y +20, 20, SDL_ColorToUint(ship_color));
+    SDL_FreeSurface(surface);
+    SDL_RenderCopy(r, texture, NULL, &dest);
+    SDL_DestroyTexture(texture);
+
+    // render trash count below the ship
+    char count_text[16];
+    snprintf(count_text, sizeof(count_text), "%d", trash_count);
+    SDL_Surface* cnt_surf = TTF_RenderText_Solid(font, count_text, color);
+    if (cnt_surf) {
+        SDL_Texture* cnt_tex = SDL_CreateTextureFromSurface(r, cnt_surf);
+        if (cnt_tex) {
+            SDL_Rect cnt_dst;
+            cnt_dst.w = cnt_surf->w;
+            cnt_dst.h = cnt_surf->h;
+            // center under the ship circle
+            int center_x = dest.x + 10;
+            int center_y = dest.y + 20;
+            cnt_dst.x = center_x - cnt_dst.w / 2;
+            cnt_dst.y = center_y + 20 + 2; // circle radius + small gap
+            SDL_RenderCopy(r, cnt_tex, NULL, &cnt_dst);
+            SDL_DestroyTexture(cnt_tex);
+        }
+        SDL_FreeSurface(cnt_surf);
+    }
 }

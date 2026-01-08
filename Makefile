@@ -4,13 +4,14 @@ CFLAGS = -Wall -Wextra -std=c11
 # Object files for main program (now using universe-simulator)
 OBJ = universe-simulator.o gravitation.o universe-data.o display.o
 
-all: program universe-client universe-server universe-simulator
+all: program universe-client universe-server universe-simulator new-universe-server
 
-test: universe-server universe-client
+test: new-universe-server universe-client
 
 #
 # --- Main program (universe-simulator) ---
 #
+
 program: $(OBJ)
 	$(CC) $(OBJ) -lm -o program -lSDL2 -lSDL2_ttf -lSDL2_gfx -lm
 
@@ -32,6 +33,7 @@ universe-simulator.o: universe-simulator.c universe-data.h gravitation.h
 display.o: display.c display.h universe-data.h
 	$(CC) $(CFLAGS) -c display.c
 
+
 #
 # --- Server and Client ---
 #
@@ -41,12 +43,16 @@ universe-server: proto/messages.pb.cc universe-server.c universe-data.o communic
 		-lncurses -lzmq -lSDL2 -lSDL2_ttf -lSDL2_gfx -lSDL2_image -lprotobuf -lstdc++ -lm
 
 
-universe-client: proto/messages.pb.cc universe-client.c universe-data.o communication_proto.cpp communication.h
-	$(CC) $(CFLAGS) -o universe-client universe-client.c communication_proto.cpp proto/messages.pb.cc universe-data.o \
-		-lncurses -lzmq -lprotobuf -lstdc++ -lm -lSDL2 -lSDL2_image
+universe-client: proto/messages.pb.cc universe-client.c universe-data.o display.o communication_proto.cpp communication.h
+	$(CC) $(CFLAGS) -o universe-client universe-client.c communication_proto.cpp proto/messages.pb.cc universe-data.o display.o \
+		-lncurses -lzmq -lprotobuf -lstdc++ -lm -lSDL2 -lSDL2_ttf -lSDL2_gfx -lSDL2_image
 
 universe-simulator: universe-simulator.o gravitation.o universe-data.o display.o
 	$(CC) $(CFLAGS) -o universe-simulator universe-simulator.o gravitation.o universe-data.o display.o -lSDL2 -lSDL2_ttf -lSDL2_gfx -lprotobuf -lstdc++ -lm
+
+new-universe-server: proto/messages.pb.cc new-universe-server.c universe-data.o communication_proto.cpp communication.h gravitation.c gravitation.h display.c display.h
+	$(CC) $(CFLAGS) -o new-universe-server new-universe-server.c communication_proto.cpp proto/messages.pb.cc gravitation.c display.c universe-data.o \
+		-lncurses -lzmq -lSDL2 -lSDL2_ttf -lSDL2_gfx -lSDL2_image -lprotobuf -lstdc++ -lm
 
 clean:
 	rm -f *.o program universe-client universe-server universe-simulator
