@@ -1,4 +1,5 @@
 #include <zmq.h>
+#include "universe-data.h"
 
 typedef char direction_t;
 
@@ -6,6 +7,7 @@ typedef char direction_t;
 #define DOWN 'd'
 #define LEFT 'l'
 #define RIGHT 'r'
+#define QUIT 'q'
 
 #define FIFO_NAME "/tmp/fifo_snail"
 void * create_client_channel(char * server_addr);
@@ -15,3 +17,8 @@ void send_movement_message(void * fd, char ch, char  direction);
 void read_message (void * fd, char * message_type, char * c, direction_t *d );
 void send_response (void * fd, char * message);
 void receive_response (void * fd, char * message);
+void send_game_state(void * fd, Ship ships[], int n_ships, Planet_t planets[], int n_planets,
+                     Trash_t trash[], int n_trash);
+                     
+int receive_game_state(void * fd, Ship ships[], int *n_ships, Planet_t planets[], int *n_planets,
+                       Trash_t trash[], int *n_trash);

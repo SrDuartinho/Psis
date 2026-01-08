@@ -5,6 +5,11 @@ message Connect {
   string ch = 1;
 }
 
+message Position {
+  int32 x = 1;
+  int32 y = 2;
+}
+
 message Move {
   string ch = 1;
   string dir = 2;
@@ -14,10 +19,37 @@ message Response {
   string text = 1;
 }
 
+message Ship {
+  string ch = 1;
+  Position pos = 2;
+  int32 trash_count = 3;
+}
+
+message Planet {
+  string name = 1;
+  Position pos = 2;
+  int32 trash_count = 3;
+  bool is_garbage = 4;
+}
+
+message Trash {
+  Position pos = 1;
+}
+
+message GameState {
+  repeated Ship ships = 1;
+  repeated Planet planets = 2;
+  repeated Trash trash = 3;
+  int32 total_trash = 4;
+}
+
 message Envelope {
   oneof payload {
     Connect connect = 1;
     Move move = 2;
     Response response = 3;
+    GameState game_state = 4;
   }
 }
+
+
