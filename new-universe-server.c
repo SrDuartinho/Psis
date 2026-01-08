@@ -225,15 +225,20 @@ void* client_handler(void* arg) {
     while (1) {
         message_type[0] = '\0';  // initialize to empty
         read_message(command_fd, message_type, &c, &d);
-        if(strcmp(message_type, "CONNECT") == 0) {
-            // Handle connection request
-        } 
-        else if(strcmp(message_type, "MOVE") == 0) {
-            if(d == 'q'){
-            //
+
+        if(strcmp(message_type, "MOVE") == 0) {
+            int pos = find_ch_info(ships, n_ships, c);
+            if (d == 'q'){
+                // remove ship from array
+                remove_ship(ships, &n_ships, pos, planets);
+                send_response(command_fd, "OK");
+                printf("Ship %c has quit the game.\n", c);
             }
-            // Lock mutex before accessing shared data
-            // pthread_mutex_lock(mutex);
+            if (pos != -1) {
+                // Apply thrust to the ship's velocity instead of teleporting position
+                new_position(&ships[pos], d);
+                send_response(command_fd, "OK");
+            }
         }
     }
     return NULL;
@@ -377,18 +382,6 @@ int main() {
             char resp[4] = {assigned_char, '\0', '\0', '\0'};
             send_response(command_fd, resp);
 
-        } else if (message_type[0] != '\0' && strcmp(message_type, "MOVE") == 0) {            int pos = find_ch_info(ships, n_ships, c);
-            if (d == 'q'){
-                // remove ship from array
-                remove_ship(ships, &n_ships, pos, planets);
-                send_response(command_fd, "OK");
-                printf("Ship %c has quit the game.\n", c);
-            }
-            if (pos != -1) {
-                // Apply thrust to the ship's velocity instead of teleporting position
-                new_position(&ships[pos], d);
-                send_response(command_fd, "OK");
-            }
         }
 
     
