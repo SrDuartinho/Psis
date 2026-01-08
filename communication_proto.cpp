@@ -32,7 +32,7 @@ extern "C" void * create_client_channel(char * server_ip_addr){
 
 static bool recv_bytes(void* fd, std::string &out) {
     // receive into a fixed buffer
-    char buf[8192];
+    char buf[65536]; // Increased buffer size to handle larger messages of game state
     int n = zmq_recv(fd, buf, sizeof(buf), 0);
     if (n <= 0) return false;
     out.assign(buf, buf + n);
@@ -215,7 +215,7 @@ extern "C" int receive_game_state(void * fd, Ship ships[], int *n_ships,
     
     // Parse trash
     *n_trash = gs.trash_size();
-    for (int i = 0; i < *n_trash && i < N_TRASH; i++) {
+    for (int i = 0; i < *n_trash && i < MAX_TRASH_WORLD; i++) {
         trash[i].position.x = gs.trash(i).pos().x();
         trash[i].position.y = gs.trash(i).pos().y();
     }

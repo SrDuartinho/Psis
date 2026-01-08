@@ -27,6 +27,11 @@ def main():
             spaceship_read = False
             for line in f:
                 line = line.strip() # Remove whitespace/newline characters
+                if line == "END":
+                    print("\033c", end="")  # Clear console
+                    print("Game has ended. Exiting dashboard.")
+                    time.sleep(4)       #So that the user can see the message
+                    return
                 if line == "----":  # Separator between planets and spaceships data
                     planets_read = True
                     continue

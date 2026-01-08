@@ -18,7 +18,7 @@ program: $(OBJ)
 
 PROTO_SRC = proto/messages.proto
 
-proto/messages.pb.cc proto/messages.pb.h: $(PROTO_SRC)
+proto/messges.pb.cc proto/messages.pb.h: $(PROTO_SRC)
 	protoc --cpp_out=proto $(PROTO_SRC)
 
 physics-rules.o: physics-rules.c physics-rules.h universe-data.h
@@ -38,7 +38,7 @@ display.o: display.c display.h universe-data.h
 
 new-universe-server: proto/messages.pb.cc new-universe-server.c cursor_processing.c physics-rules.c universe-data.o communication_proto.cpp communication.h cursor_processing.h physics-rules.h display.c display.h
 	$(CC) $(CFLAGS) -o new-universe-server new-universe-server.c cursor_processing.c physics-rules.c communication_proto.cpp proto/messages.pb.cc display.c universe-data.o \
-		-lncurses -lzmq -lSDL2 -lSDL2_ttf -lSDL2_gfx -lSDL2_image -lprotobuf -lstdc++ -lm
+		-lncurses -lzmq -lSDL2 -lSDL2_ttf -lSDL2_gfx -lSDL2_image -lprotobuf -lstdc++ -lm -lpthread
 
 
 new-trash-ship-client: proto/messages.pb.cc new-trash-ship-client.c display.o universe-data.o communication_proto.cpp communication.h display.h

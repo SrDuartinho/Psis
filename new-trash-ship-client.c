@@ -34,7 +34,7 @@ void* info_receiver(void * fd){
     int n_ships = 0;
     Planet_t planets[PLANET_NUM];
     int n_planets = 0;
-    Trash_t trash[N_TRASH];
+    Trash_t trash[MAX_TRASH_WORLD];
     int n_trash = 0;
 
     int client_server = 1; //1 for client, 0 for server
@@ -72,7 +72,7 @@ void* info_receiver(void * fd){
                 break;
             }
         }
-        
+
         if(window_close == 1 || close == 1){    // To avoid further processing after game end
             close = 1;
             break;
@@ -87,7 +87,7 @@ void* info_receiver(void * fd){
             SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
             SDL_RenderClear(rend);
             planet_drawer(planets, n_planets, rend, planet_color, garbage_planet_color, font);
-            trash_drawer(trash, n_trash, rend, trash_color);
+            trash_drawer(trash, MAX_TRASH_WORLD, rend, trash_color);
             for(i = 0; i < n_ships; i++){
                 draw_char(rend, font, ship[i].ch, ship[i].position.x, ship[i].position.y, ship_color, ship[i].trash_count);
             }

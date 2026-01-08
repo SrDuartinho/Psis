@@ -12,6 +12,7 @@
 #include "display.h"
 #include "SDL2/SDL2_gfxPrimitives.h"
 #include "SDL2/SDL_pixels.h"
+#include <pthread.h>
 
 
 //Function prototypes
@@ -19,6 +20,15 @@ void planets_init(Planet_t* planets, int num_planets);
 SDL_Color random_color();
 Uint32 SDL_ColorToUint(SDL_Color c);
 
+typedef struct{
+    Ship* ships;
+    int* n_ships;
+    Planet_t* planets;
+    Trash_t* trash;
+    int* n_trash;
+    pthread_mutex_t* mutex;
+    void *state_fd;
+}ThreadData_t;
 
 direction_t random_direction() {
     return rand() % 4;
@@ -119,7 +129,6 @@ void scatter_trash(Ship* ship, Trash_t trash[], int* n_trash, int window_size)
 }
 
 
-
 /** 
  * @brief Writes the current game statistics to "dashboard.txt".
  * @param planets Array of planets.
@@ -128,13 +137,47 @@ void scatter_trash(Ship* ship, Trash_t trash[], int* n_trash, int window_size)
  * @param n_ships Number of ships.
  * @param total_trash The current amount of trash in the world.
  */
-void statistics_writer(Planet_t planets[], int num_planets, Ship ships[], int n_ships,
-    int total_trash) {
+
+ /**
+ * @brief Removes a ship from the ships array and marks its corresponding planet's ship as unassigned.
+ * @param ships Array of ships.
+ * @param n_ships Pointer to the number of ships.
+ * @param index Index of the ship to be removed.
+ * @param planets Array of planets.
+ */
+
+void remove_ship(Ship ships[], int* n_ships, int index, Planet_t planets[]) {
+    if (index < 0 || index >= *n_ships) return;
+
+    // Find the corresponding planet and mark its ship as unassigned
+    for (int i = 0; i < PLANET_NUM; i++) {
+        if (planets[i].ship.ch == ships[index].ch) {
+            planets[i].ship_assigned = 0;
+            break;
+        }
+    }
+
+    // Shift all elements left
+    for (int j = index; j < *n_ships - 1; j++) {
+        ships[j] = ships[j + 1];
+    }
+
+    (*n_ships)--; // one less ship
+}
+
+void statistics_writer(Planet_t planets[], int num_planets, Ship ships[], int n_ships, int total_trash) {
+
     FILE *f;
     f = fopen("dashboard.txt", "w");
 
     if (f == NULL) {
         perror("Error opening dashboard.txt");
+        return;
+    }
+
+    if(planets == NULL && ships == NULL){
+        fprintf(f, "END\n");
+        fclose(f);
         return;
     }
 
@@ -155,57 +198,47 @@ void statistics_writer(Planet_t planets[], int num_planets, Ship ships[], int n_
 
 /**
  * @brief Handler function for client connections. Receives and processes the keystrokes 
- * sent by the clients. Should be run in a separate thread for each client.
+ * sent by the clients. Creates its own socket REQ/REP.Should be run in a separate thread for each client.
+ * @param: void arg* a ThreadData_t struct containing all necessary data for the thread to operate.
+ * @return: NULL
  */
 void* client_handler(void* arg) {
     //Each client has its own socket
-    void *fd = create_server_channel();
+    void *command_fd = create_server_channel();
+    int timeout = 10;  // 10ms timeout to avoid blocking
+    zmq_setsockopt(command_fd, ZMQ_RCVTIMEO, &timeout, sizeof(int)); //10ms timeout to avoid blocking
     
+    //Unpack thread data
+    ThreadData_t* data = (ThreadData_t*)arg;
+    Ship* ships = data->ships;
+    int* n_ships = data->n_ships;
+    Planet_t* planets = data->planets;
+    Trash_t* trash = data->trash;
+    int* n_trash = data->n_trash;
+    pthread_mutex_t* mutex = data->mutex;
+    void* state_fd = data->state_fd;
+
     char message_type[100];
-    char c;
+    char c = '\0';
     direction_t d;
 
     while (1) {
         message_type[0] = '\0';  // initialize to empty
-        read_message(fd, message_type, &c, &d);
-        if (strcmp(message_type, "MOVE") == 0) {
-            // Handle movement command
-            // (Implementation omitted for brevity)
-        }
-        else if (strcmp(message_type, "DISCONNECT") == 0) {
-            // Handle disconnection
-            break;
+        read_message(command_fd, message_type, &c, &d);
+        if(strcmp(message_type, "CONNECT") == 0) {
+            // Handle connection request
+        } 
+        else if(strcmp(message_type, "MOVE") == 0) {
+            if(d == 'q'){
+            //
+            }
+            // Lock mutex before accessing shared data
+            // pthread_mutex_lock(mutex);
         }
     }
     return NULL;
 }
 
-
-/**
- * @brief Removes a ship from the ships array and marks its corresponding planet's ship as unassigned.
- * @param ships Array of ships.
- * @param n_ships Pointer to the number of ships.
- * @param index Index of the ship to be removed.
- * @param planets Array of planets.
- */
-void remove_ship(Ship ships[], int* n_ships, int index, Planet_t planets[]) {
-    if (index < 0 || index >= *n_ships) return;
-
-    // Find the corresponding planet and mark its ship as unassigned
-    for (int i = 0; i < PLANET_NUM; i++) {
-        if (planets[i].ship.ch == ships[index].ch) {
-            planets[i].ship_assigned = 0;
-            break;
-        }
-    }
-
-    // Shift all elements left
-    for (int j = index; j < *n_ships - 1; j++) {
-        ships[j] = ships[j + 1];
-    }
-
-    (*n_ships)--; // one less ship
-}
 
 int main() {
 
@@ -282,6 +315,7 @@ int main() {
         SDL_Event event;
         while(SDL_PollEvent(&event)){
             if (event.type == SDL_QUIT){
+                send_game_state(state_fd, NULL, 0, NULL, 0, NULL, 0); // Indicate game end to clients
                 close = 1;
             }
         }
@@ -338,6 +372,12 @@ int main() {
             send_response(command_fd, resp);
 
         } else if (message_type[0] != '\0' && strcmp(message_type, "MOVE") == 0) {            int pos = find_ch_info(ships, n_ships, c);
+            if (d == 'q'){
+                // remove ship from array
+                remove_ship(ships, &n_ships, pos, planets);
+                send_response(command_fd, "OK");
+                printf("Ship %c has quit the game.\n", c);
+            }
             if (pos != -1) {
                 // Apply thrust to the ship's velocity instead of teleporting position
                 new_position(&ships[pos], d);
@@ -345,11 +385,7 @@ int main() {
             }
         }
 
-        
-
-
-
-        
+    
         // Trash interaction
         for (int i = 0; i < n_ships; i++){
             for (int j = 0; j < n_trash; j++){
@@ -424,6 +460,7 @@ int main() {
                         if (ret == -1) {
                             printf("Ending game.\n");
                             send_game_state(state_fd, NULL, 0, NULL, 0, NULL, 0); //Notify clients of the game endinf
+                            statistics_writer(NULL, 0, NULL, 0, 0);
                             end_game(rend, win);
                             close = 1;
                             break;  
@@ -452,6 +489,8 @@ int main() {
         new_ship_acceleration(planets, PLANET_NUM, ships, n_ships);
         new_ship_velocity(ships, n_ships);
         new_ship_position(ships, n_ships);
+
+        statistics_writer(planets, PLANET_NUM, ships, n_ships, n_trash);
         
         // Broadcast game state to all clients
         send_game_state(state_fd, ships, n_ships, planets, PLANET_NUM, trash, n_trash);
